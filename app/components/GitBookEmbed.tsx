@@ -18,6 +18,7 @@ export default function GitBookEmbed() {
       <GitBookFrame
         className="gitbook-embed"
         tabs={["assistant", "docs"]}
+        actions={[]}
         greeting={{
           title: "Nebula Sync Assistant",
           subtitle: "Ask anything about syncing, APIs, or onboarding.",
@@ -27,6 +28,7 @@ export default function GitBookEmbed() {
           "Show me the sync status API",
           "Where do I configure roles?",
         ]}
+        tools={[]}
       />
     </GitBookProvider>
   );
