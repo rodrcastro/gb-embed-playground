@@ -1,26 +1,163 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #07060d;
+  --foreground: #f5f1ff;
+  --nebula-1: #1c0f33;
+  --nebula-2: #3d1b63;
+  --nebula-3: #2a2a7b;
+  --nebula-4: #111322;
+  --nebula-glow: #9f7aea;
+  --nebula-mist: rgba(159, 122, 234, 0.18);
+  --card: rgba(12, 12, 24, 0.72);
+  --card-border: rgba(255, 255, 255, 0.12);
+  --text-muted: #c6bedf;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-space);
+  --font-display: var(--font-fraunces);
+  --font-mono: var(--font-jetbrains);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #07060d;
+    --foreground: #f5f1ff;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+.nebula-shell {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(60% 60% at 15% 20%, rgba(159, 122, 234, 0.22), transparent 60%),
+    radial-gradient(70% 70% at 85% 10%, rgba(94, 234, 212, 0.12), transparent 50%),
+    radial-gradient(70% 70% at 80% 85%, rgba(56, 189, 248, 0.16), transparent 50%),
+    linear-gradient(160deg, #06050b 0%, #121320 52%, #0a0a16 100%);
+}
+
+.nebula-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.3) 0.5px, transparent 1.5px),
+    radial-gradient(circle, rgba(255, 255, 255, 0.2) 0.5px, transparent 1.5px);
+  background-size: 120px 120px, 220px 220px;
+  background-position: 0 0, 50px 60px;
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.nebula-shell::after {
+  content: "";
+  position: absolute;
+  inset: -40% -10% auto -10%;
+  height: 60%;
+  background: radial-gradient(50% 50% at 50% 50%, rgba(159, 122, 234, 0.35), transparent 70%);
+  filter: blur(10px);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.nebula-content {
+  position: relative;
+  z-index: 1;
+}
+
+.font-display {
+  font-family: var(--font-display);
+}
+
+.glass-card {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 24px 60px rgba(6, 6, 16, 0.6);
+  backdrop-filter: blur(18px);
+}
+
+.soft-ring {
+  box-shadow: 0 0 0 1px rgba(159, 122, 234, 0.25), 0 0 50px rgba(159, 122, 234, 0.2);
+}
+
+.nebula-orb {
+  background: radial-gradient(55% 55% at 30% 30%, #7c3aed, #4c1d95 55%, #1f163f 100%);
+  border-radius: 999px;
+}
+
+.nebula-tag {
+  background: rgba(159, 122, 234, 0.18);
+  border: 1px solid rgba(159, 122, 234, 0.4);
+  color: #efe7ff;
+}
+
+.nebula-muted {
+  color: var(--text-muted);
+}
+
+.gitbook-embed {
+  height: 520px;
+  width: 100%;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+  background: #0a0a16;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float-slow {
+  0%,
+  100% {
+    transform: translateY(-2px);
+  }
+  50% {
+    transform: translateY(6px);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.8s ease both;
+}
+
+.animate-float {
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+.delay-1 {
+  animation-delay: 0.15s;
+}
+
+.delay-2 {
+  animation-delay: 0.3s;
+}
+
+.delay-3 {
+  animation-delay: 0.45s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-float {
+    animation: none;
+  }
 }
