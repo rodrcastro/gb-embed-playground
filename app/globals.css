@@ -121,6 +121,20 @@ body {
   border-radius: 24px;
 }
 
+.gitbook-embed-light-surface {
+  background: #ffffff !important;
+  isolation: isolate;
+}
+
+.gitbook-embed-frame-light,
+iframe.gitbook-embed-light-surface,
+.gitbook-embed-light-surface iframe {
+  background: #ffffff !important;
+  opacity: 1 !important;
+  filter: none !important;
+  mix-blend-mode: normal !important;
+}
+
 .embed-lab {
   background:
     linear-gradient(145deg, rgba(17, 15, 36, 0.96), rgba(11, 11, 24, 0.88)),
@@ -423,6 +437,11 @@ body {
   letter-spacing: 0.03em;
   padding: 0.42rem 0.82rem;
   cursor: pointer;
+}
+
+.lab-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .lab-button.ghost {

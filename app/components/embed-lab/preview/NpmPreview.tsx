@@ -43,7 +43,7 @@ export function NpmPreview({ siteURL, mode, sharedConfiguration, onStatus }: Npm
 
       container.innerHTML = "";
       const iframe = document.createElement("iframe");
-      iframe.className = "gitbook-embed-frame";
+      iframe.className = "gitbook-embed-frame gitbook-embed-frame-light";
       container.appendChild(iframe);
 
       try {
@@ -98,5 +98,5 @@ export function NpmPreview({ siteURL, mode, sharedConfiguration, onStatus }: Npm
     };
   }, [siteURL, configuration, mode, onStatus]);
 
-  return <div ref={containerRef} className="gitbook-embed" />;
+  return <div ref={containerRef} className="gitbook-embed gitbook-embed-light-surface" />;
 }

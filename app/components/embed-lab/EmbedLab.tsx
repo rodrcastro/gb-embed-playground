@@ -37,7 +37,9 @@ function resolveInitialState(): PlaygroundState {
 }
 
 export default function EmbedLab() {
-  const [state, setState] = useState<PlaygroundState>(() => resolveInitialState());
+  const [draftState, setDraftState] = useState<PlaygroundState>(() => resolveInitialState());
+  const [appliedState, setAppliedState] = useState<PlaygroundState>(() => resolveInitialState());
+  const [previewRevision, setPreviewRevision] = useState(0);
   const [rawConfiguration, setRawConfiguration] = useState(() => {
     const initialState = resolveInitialState();
     return formatConfigurationJson(
@@ -47,22 +49,27 @@ export default function EmbedLab() {
   });
   const [status, setStatus] = useState<EmbedLabStatus>({
     level: "info",
-    message: "Ready for live testing.",
+    message: "Ready. Edit settings, then save to refresh preview.",
   });
 
   const validation = useMemo(
-    () => validateConfiguration(state.sharedConfiguration, state.scriptOnlyConfiguration),
-    [state.sharedConfiguration, state.scriptOnlyConfiguration],
+    () => validateConfiguration(draftState.sharedConfiguration, draftState.scriptOnlyConfiguration),
+    [draftState.sharedConfiguration, draftState.scriptOnlyConfiguration],
+  );
+
+  const isDirty = useMemo(
+    () => JSON.stringify(draftState) !== JSON.stringify(appliedState),
+    [draftState, appliedState],
   );
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
-      writeStateToUrl(state);
-      writeStateToLocalStorage(state);
+      writeStateToUrl(appliedState);
+      writeStateToLocalStorage(appliedState);
     }, 380);
 
     return () => window.clearTimeout(timeout);
-  }, [state]);
+  }, [appliedState]);
 
   const updateStatus = useCallback((message: string, level: "info" | "success" | "error" = "info") => {
     setStatus({ message, level });
@@ -84,46 +91,72 @@ export default function EmbedLab() {
         return;
       }
 
-      setState((prev) => ({
+      setDraftState((prev) => ({
         ...prev,
         sharedConfiguration: parsed.sharedConfiguration,
         scriptOnlyConfiguration: parsed.scriptOnlyConfiguration,
       }));
-      setStatus({ level: "success", message: "JSON applied." });
+      setStatus({ level: "info", message: "JSON loaded into editor. Save changes to refresh preview." });
     } catch {
       setStatus({ level: "error", message: "Invalid JSON. Last valid config is still running." });
     }
   };
 
+  const saveChanges = () => {
+    if (!isDirty) {
+      setPreviewRevision((prev) => prev + 1);
+      setStatus({ level: "info", message: "Preview refreshed from current saved configuration." });
+      return;
+    }
+
+    if (!validation.valid) {
+      setStatus({
+        level: "error",
+        message: validation.message || "Configuration is invalid.",
+      });
+      return;
+    }
+
+    setAppliedState(draftState);
+    setPreviewRevision((prev) => prev + 1);
+    setStatus({ level: "success", message: "Changes saved. Live preview refreshed." });
+  };
+
   const inactiveMessage = useMemo(() => {
-    if (state.implementation === "script") {
+    if (isDirty) {
+      return "Unsaved changes. Click Save changes to refresh preview.";
+    }
+
+    if (draftState.implementation === "script") {
       return "All controls are active in Script mode.";
     }
 
     return "Script button settings are preserved but inactive in this mode.";
-  }, [state.implementation]);
+  }, [draftState.implementation, isDirty]);
 
   const resetToDefaults = () => {
-    setState(DEFAULT_PLAYGROUND_STATE);
+    setDraftState(DEFAULT_PLAYGROUND_STATE);
+    setAppliedState(DEFAULT_PLAYGROUND_STATE);
+    setPreviewRevision((prev) => prev + 1);
     setRawConfiguration(
       formatConfigurationJson(
         DEFAULT_PLAYGROUND_STATE.sharedConfiguration,
         DEFAULT_PLAYGROUND_STATE.scriptOnlyConfiguration,
       ),
     );
-    setStatus({ level: "info", message: "Reset to defaults." });
+    setStatus({ level: "info", message: "Reset to defaults and refreshed preview." });
     clearPersistedState();
   };
 
   const setSharedConfiguration = (next: PlaygroundState["sharedConfiguration"]) => {
-    setState((prev) => {
+    setDraftState((prev) => {
       setRawConfiguration(formatConfigurationJson(next, prev.scriptOnlyConfiguration));
       return { ...prev, sharedConfiguration: next };
     });
   };
 
   const setScriptOnlyConfiguration = (next: PlaygroundState["scriptOnlyConfiguration"]) => {
-    setState((prev) => {
+    setDraftState((prev) => {
       setRawConfiguration(formatConfigurationJson(prev.sharedConfiguration, next));
       return { ...prev, scriptOnlyConfiguration: next };
     });
@@ -143,21 +176,35 @@ export default function EmbedLab() {
           <p className="text-xs uppercase tracking-[0.3em] text-white/55">Embed Lab</p>
           <h3 className="mt-2 font-display text-2xl text-white">Live GitBook playground</h3>
           <p className="mt-1 text-sm nebula-muted">
-            Switch implementation modes and test configuration changes instantly on deployed builds.
+            Edit configuration and save to refresh preview against deployed builds.
           </p>
         </div>
-        <button type="button" className="lab-button ghost" onClick={resetToDefaults}>
-          Reset defaults
-        </button>
+        <div className="lab-row">
+          <button
+            type="button"
+            className="lab-button"
+            onClick={saveChanges}
+            title={
+              isDirty
+                ? "Apply editor changes and refresh preview"
+                : "No unsaved changes. Click to refresh preview."
+            }
+          >
+            Save changes
+          </button>
+          <button type="button" className="lab-button ghost" onClick={resetToDefaults}>
+            Reset defaults
+          </button>
+        </div>
       </div>
 
       <div className="lab-top-controls">
         <div>
           <p className="lab-label">Implementation</p>
           <ImplementationSwitcher
-            value={state.implementation}
+            value={draftState.implementation}
             onChange={(implementation) =>
-              setState((prev) => ({
+              setDraftState((prev) => ({
                 ...prev,
                 implementation,
                 ui: {
@@ -171,9 +218,9 @@ export default function EmbedLab() {
         <div>
           <p className="lab-label">Initial mode</p>
           <ModeSwitcher
-            value={state.mode}
+            value={draftState.mode}
             onChange={(mode) =>
-              setState((prev) => ({
+              setDraftState((prev) => ({
                 ...prev,
                 mode,
               }))
@@ -190,11 +237,11 @@ export default function EmbedLab() {
       <div className="lab-main-grid">
         <div className="lab-left-col">
           <ConfigEditor
-            implementation={state.implementation}
-            siteURL={state.siteURL}
-            onSiteURLChange={(siteURL) => setState((prev) => ({ ...prev, siteURL }))}
-            sharedConfiguration={state.sharedConfiguration}
-            scriptOnlyConfiguration={state.scriptOnlyConfiguration}
+            implementation={draftState.implementation}
+            siteURL={draftState.siteURL}
+            onSiteURLChange={(siteURL) => setDraftState((prev) => ({ ...prev, siteURL }))}
+            sharedConfiguration={draftState.sharedConfiguration}
+            scriptOnlyConfiguration={draftState.scriptOnlyConfiguration}
             onSharedConfigurationChange={setSharedConfiguration}
             onScriptOnlyConfigurationChange={setScriptOnlyConfiguration}
             rawConfiguration={rawConfiguration}
@@ -210,10 +257,10 @@ export default function EmbedLab() {
             </summary>
             <div className="lab-toggle-content">
               <CodeSnippets
-                siteURL={state.siteURL}
-                mode={state.mode}
-                sharedConfiguration={state.sharedConfiguration}
-                scriptOnlyConfiguration={state.scriptOnlyConfiguration}
+                siteURL={appliedState.siteURL}
+                mode={appliedState.mode}
+                sharedConfiguration={appliedState.sharedConfiguration}
+                scriptOnlyConfiguration={appliedState.scriptOnlyConfiguration}
               />
             </div>
           </details>
@@ -222,14 +269,15 @@ export default function EmbedLab() {
         <div className="lab-right-col">
           <div className="lab-preview-header">
             <p className="lab-label">Live preview</p>
-            <span className="lab-chip">{state.implementation.toUpperCase()}</span>
+            <span className="lab-chip">{appliedState.implementation.toUpperCase()}</span>
           </div>
           <EmbedPreview
-            implementation={state.implementation}
-            siteURL={state.siteURL}
-            mode={state.mode}
-            sharedConfiguration={state.sharedConfiguration}
-            scriptOnlyConfiguration={state.scriptOnlyConfiguration}
+            key={`${appliedState.implementation}-${previewRevision}`}
+            implementation={appliedState.implementation}
+            siteURL={appliedState.siteURL}
+            mode={appliedState.mode}
+            sharedConfiguration={appliedState.sharedConfiguration}
+            scriptOnlyConfiguration={appliedState.scriptOnlyConfiguration}
             onStatus={updateStatus}
           />
         </div>

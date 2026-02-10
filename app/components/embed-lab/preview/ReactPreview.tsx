@@ -27,11 +27,12 @@ export function ReactPreview({ siteURL, sharedConfiguration, className }: ReactP
     title: configuration.greeting?.title ?? "",
     subtitle: configuration.greeting?.subtitle ?? "",
   };
+  const frameClassName = [className, "gitbook-embed-light-surface"].filter(Boolean).join(" ");
 
   return (
     <GitBookProvider siteURL={siteURL}>
       <GitBookFrame
-        className={className}
+        className={frameClassName}
         tabs={configuration.tabs}
         actions={configuration.actions as never}
         greeting={greeting}
