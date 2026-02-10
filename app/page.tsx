@@ -4,6 +4,7 @@ import FloatingEmbedPortal from "./components/FloatingEmbedPortal";
 import GitBookEmbed from "./components/GitBookEmbed";
 import GitBookEmbedNpm from "./components/GitBookEmbedNpm";
 import GitBookEmbedScript from "./components/GitBookEmbedScript";
+import GitBookScriptReset from "./components/GitBookScriptReset";
 
 const features = [
   {
@@ -127,6 +128,7 @@ export default async function Home({
   return (
     <div className="nebula-shell">
       <div className="nebula-content mx-auto flex max-w-6xl flex-col gap-16 px-6 pb-24 pt-10">
+        <GitBookScriptReset mode={activeEmbed} />
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="nebula-orb soft-ring flex h-12 w-12 items-center justify-center">

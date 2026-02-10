@@ -20,8 +20,8 @@ export default function GitBookEmbed() {
         tabs={["assistant", "docs"]}
         actions={[]}
         greeting={{
-          title: "GitBook Assistant",
-          subtitle: "Ask about docs and product usage.",
+          title: "Hey! 👋",
+          subtitle: "How can we help?",
         }}
         suggestions={[]}
         tools={[]}
