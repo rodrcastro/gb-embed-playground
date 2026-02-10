@@ -17,7 +17,7 @@ export default function GitBookEmbedNpm() {
     const gitbook = createGitBook({ siteURL: SITE_URL });
     const iframe = document.createElement("iframe");
 
-    iframe.className = "gitbook-embed";
+    iframe.className = "gb-demo-frame";
     iframe.src = gitbook.getFrameURL({});
     iframe.title = "GitBook Embed (NPM)";
     iframe.loading = "lazy";

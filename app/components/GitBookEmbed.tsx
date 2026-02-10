@@ -16,7 +16,7 @@ export default function GitBookEmbed() {
   return (
     <GitBookProvider siteURL="https://stage.docs.rodrcastro.dev">
       <GitBookFrame
-        className="gitbook-embed"
+        className="gb-demo-frame"
         tabs={["assistant", "docs"]}
         actions={[]}
         greeting={{
