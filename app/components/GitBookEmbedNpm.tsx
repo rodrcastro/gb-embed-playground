@@ -21,6 +21,8 @@ export default function GitBookEmbedNpm() {
     iframe.src = gitbook.getFrameURL({});
     iframe.title = "GitBook Embed (NPM)";
     iframe.loading = "lazy";
+    iframe.style.width = "100%";
+    iframe.style.height = "100%";
 
     mountNode.appendChild(iframe);
 
@@ -29,5 +31,5 @@ export default function GitBookEmbedNpm() {
     };
   }, []);
 
-  return <div ref={mountRef} />;
+  return <div ref={mountRef} className="gb-demo-frame-mount" />;
 }
