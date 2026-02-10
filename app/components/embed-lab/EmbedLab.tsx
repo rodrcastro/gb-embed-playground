@@ -7,6 +7,7 @@ import { ConfigEditor } from "./controls/ConfigEditor";
 import { ImplementationSwitcher } from "./controls/ImplementationSwitcher";
 import { ModeSwitcher } from "./controls/ModeSwitcher";
 import { EmbedPreview } from "./preview/EmbedPreview";
+import { cleanupGitBookScriptWidget } from "./preview/ScriptPreview";
 import {
   clearPersistedState,
   readStateFromLocalStorage,
@@ -70,6 +71,12 @@ export default function EmbedLab() {
 
     return () => window.clearTimeout(timeout);
   }, [appliedState]);
+
+  useEffect(() => {
+    if (appliedState.implementation !== "script") {
+      cleanupGitBookScriptWidget();
+    }
+  }, [appliedState.implementation, previewRevision]);
 
   const updateStatus = useCallback((message: string, level: "info" | "success" | "error" = "info") => {
     setStatus({ message, level });
@@ -203,7 +210,7 @@ export default function EmbedLab() {
           <p className="lab-label">Implementation</p>
           <ImplementationSwitcher
             value={draftState.implementation}
-            onChange={(implementation) =>
+            onChange={(implementation) => {
               setDraftState((prev) => ({
                 ...prev,
                 implementation,
@@ -211,8 +218,18 @@ export default function EmbedLab() {
                   ...prev.ui,
                   codeTab: implementation,
                 },
-              }))
-            }
+              }));
+              setAppliedState((prev) => ({
+                ...prev,
+                implementation,
+                ui: {
+                  ...prev.ui,
+                  codeTab: implementation,
+                },
+              }));
+              setPreviewRevision((prev) => prev + 1);
+              setStatus({ level: "info", message: "Implementation changed. Preview refreshed." });
+            }}
           />
         </div>
         <div>

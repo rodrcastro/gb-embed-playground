@@ -1,4 +1,8 @@
-import EmbedLab from "./components/embed-lab/EmbedLab";
+import dynamic from "next/dynamic";
+
+const EmbedLab = dynamic(() => import("./components/embed-lab/EmbedLab"), {
+  ssr: false,
+});
 
 export default function Home() {
   return (

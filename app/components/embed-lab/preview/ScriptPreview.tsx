@@ -35,6 +35,40 @@ declare global {
   }
 }
 
+export function cleanupGitBookScriptWidget() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (typeof window.GitBook === "function") {
+    try {
+      window.GitBook("close");
+      window.GitBook("hide");
+      window.GitBook("unload");
+    } catch {
+      // No-op: best effort cleanup for third-party widget state.
+    }
+  }
+
+  const existingScript = document.getElementById("gitbook-embed-script");
+  existingScript?.remove();
+
+  const floatingEmbedNodes = Array.from(document.querySelectorAll<HTMLElement>("body *")).filter((node) => {
+    if (node.closest(".embed-lab") || node.closest(".gitbook-embed")) {
+      return false;
+    }
+
+    if (!node.querySelector('iframe[src*="/~gitbook/embed"]')) {
+      return false;
+    }
+
+    const style = window.getComputedStyle(node);
+    return style.position === "fixed";
+  });
+
+  floatingEmbedNodes.forEach((node) => node.remove());
+}
+
 function resolveGitBookScriptURL(siteURL: string): string {
   try {
     const url = new URL(siteURL);
@@ -84,7 +118,7 @@ export function ScriptPreview({
         return;
       }
 
-      window.GitBook("unload");
+      cleanupGitBookScriptWidget();
       window.GitBook(
         "init",
         { siteURL },
@@ -141,9 +175,7 @@ export function ScriptPreview({
 
     return () => {
       cancelled = true;
-      if (typeof window.GitBook === "function") {
-        window.GitBook("unload");
-      }
+      cleanupGitBookScriptWidget();
     };
   }, [siteURL, mode, configuration, onStatus, sharedConfiguration.visitor.token]);
 
