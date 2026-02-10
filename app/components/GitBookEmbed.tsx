@@ -16,18 +16,14 @@ export default function GitBookEmbed() {
   return (
     <GitBookProvider siteURL="https://stage.docs.rodrcastro.dev">
       <GitBookFrame
-        className="gitbook-embed"
+        className="gb-demo-frame"
         tabs={["assistant", "docs"]}
         actions={[]}
         greeting={{
-          title: "Nebula Sync Assistant",
-          subtitle: "Ask anything about syncing, APIs, or onboarding.",
+          title: "Hey! 👋",
+          subtitle: "How can we help?",
         }}
-        suggestions={[
-          "How do I connect a workspace?",
-          "Show me the sync status API",
-          "Where do I configure roles?",
-        ]}
+        suggestions={[]}
         tools={[]}
       />
     </GitBookProvider>
