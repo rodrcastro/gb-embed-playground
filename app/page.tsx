@@ -1,4 +1,9 @@
+import Link from "next/link";
+
+import FloatingEmbedPortal from "./components/FloatingEmbedPortal";
 import GitBookEmbed from "./components/GitBookEmbed";
+import GitBookEmbedNpm from "./components/GitBookEmbedNpm";
+import GitBookEmbedScript from "./components/GitBookEmbedScript";
 
 const features = [
   {
@@ -23,6 +28,42 @@ const metrics = [
   { label: "Median sync time", value: "2.4s" },
   { label: "Live incidents", value: "0" },
 ];
+
+type EmbedMode = "react" | "npm" | "script";
+
+const EMBED_MODES: Array<{ id: EmbedMode; label: string }> = [
+  { id: "react", label: "React" },
+  { id: "npm", label: "NPM" },
+  { id: "script", label: "Script" },
+];
+
+function parseEmbedMode(value?: string): EmbedMode {
+  if (value === "react" || value === "npm" || value === "script") {
+    return value;
+  }
+
+  return "react";
+}
+
+function renderEmbed(mode: EmbedMode) {
+  if (mode === "npm") {
+    return <GitBookEmbedNpm />;
+  }
+
+  if (mode === "script") {
+    return <GitBookEmbedScript />;
+  }
+
+  return <GitBookEmbed />;
+}
+
+function renderFloatingEmbed(mode: EmbedMode) {
+  if (mode === "script") {
+    return <GitBookEmbedScript />;
+  }
+
+  return <FloatingEmbedPortal>{renderEmbed(mode)}</FloatingEmbedPortal>;
+}
 
 function NebulaIcon({ className }: { className?: string }) {
   return (
@@ -75,7 +116,14 @@ function NebulaIcon({ className }: { className?: string }) {
   );
 }
 
-export default function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ embed?: string }>;
+}) {
+  const params = await searchParams;
+  const activeEmbed = parseEmbedMode(params?.embed);
+
   return (
     <div className="nebula-shell">
       <div className="nebula-content mx-auto flex max-w-6xl flex-col gap-16 px-6 pb-24 pt-10">
@@ -102,6 +150,21 @@ export default function Home() {
             Request access
           </button>
         </header>
+
+        <div className="embed-toggle-wrap">
+          <div className="embed-toggle" role="tablist" aria-label="Embed mode">
+            {EMBED_MODES.map((mode) => (
+              <Link
+                key={mode.id}
+                href={`/?embed=${mode.id}`}
+                scroll={false}
+                className={`embed-toggle-link ${activeEmbed === mode.id ? "is-active" : ""}`}
+              >
+                {mode.label}
+              </Link>
+            ))}
+          </div>
+        </div>
 
         <main className="flex flex-col gap-16">
           <section className="grid gap-12 lg:grid-cols-[1.1fr,0.9fr]">
@@ -190,7 +253,7 @@ export default function Home() {
             ))}
           </section>
 
-          <section className="grid gap-10 lg:grid-cols-[0.9fr,1.1fr]">
+          <section className="grid gap-10">
             <div className="flex flex-col gap-6">
               <div className="flex items-center gap-3">
                 <div className="nebula-orb flex h-11 w-11 items-center justify-center">
@@ -206,9 +269,9 @@ export default function Home() {
                 </div>
               </div>
               <p className="text-base leading-relaxed nebula-muted">
-                Keep support close to the workflow. The GitBook embed below
-                ships with both the Assistant and Docs tabs so the team can stay
-                in context while troubleshooting or onboarding.
+                Compare the three embed implementations from a single page. The
+                toggle at the top switches between React, npm, and script
+                versions.
               </p>
               <div className="glass-card rounded-2xl p-4">
                 <p className="text-xs uppercase tracking-[0.3em] text-white/50">
@@ -227,13 +290,10 @@ export default function Home() {
                 </div>
               </div>
             </div>
-
-            <div className="glass-card rounded-3xl p-4">
-              <GitBookEmbed />
-            </div>
           </section>
         </main>
       </div>
+      {renderFloatingEmbed(activeEmbed)}
     </div>
   );
 }
