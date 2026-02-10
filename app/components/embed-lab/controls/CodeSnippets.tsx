@@ -36,6 +36,11 @@ export function buildNpmSnippet(
   sharedConfiguration: SharedConfiguration,
   mode: "assistant" | "docs",
 ) {
+  const modeNavigation =
+    mode === "assistant"
+      ? "frame.navigateToAssistant();"
+      : "frame.navigateToPage(\"/\");";
+
   return `import { createGitBook } from "@gitbook/embed";
 
 const iframe = document.createElement("iframe");
@@ -43,11 +48,13 @@ iframe.style.width = "100%";
 iframe.style.height = "100%";
 document.querySelector("#gitbook-target")?.append(iframe);
 
-const embed = createGitBook(iframe, "${siteURL}");
-embed.configure({
+const client = createGitBook({ siteURL: "${siteURL}" });
+const frame = client.createFrame(iframe);
+frame.configure({
   mode: "${mode}",
   ...${toJson(sharedConfiguration)}
-});`;
+});
+${modeNavigation}`;
 }
 
 export function buildScriptSnippet(

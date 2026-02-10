@@ -13,8 +13,12 @@ interface NpmPreviewProps {
 
 interface GitBookRuntime {
   configure: (config: Record<string, unknown>) => void;
+  navigateToPage?: (path: string) => void;
   navigateToAssistant?: () => void;
-  destroy?: () => void;
+}
+
+interface GitBookClientRuntime {
+  createFrame: (frame: HTMLIFrameElement) => GitBookRuntime;
 }
 
 export function NpmPreview({ siteURL, mode, sharedConfiguration, onStatus }: NpmPreviewProps) {
@@ -43,9 +47,12 @@ export function NpmPreview({ siteURL, mode, sharedConfiguration, onStatus }: Npm
         }
 
         const createGitBook = (
-          mod as { createGitBook: (frame: HTMLIFrameElement, url: string) => GitBookRuntime }
+          mod as unknown as {
+            createGitBook: (options: { siteURL: string }) => GitBookClientRuntime;
+          }
         ).createGitBook;
-        const gitbook = createGitBook(iframe, siteURL);
+        const gitbookClient = createGitBook({ siteURL });
+        const gitbook = gitbookClient.createFrame(iframe);
 
         gitbook.configure({
           ...configuration,
@@ -54,11 +61,12 @@ export function NpmPreview({ siteURL, mode, sharedConfiguration, onStatus }: Npm
 
         if (mode === "assistant") {
           gitbook.navigateToAssistant?.();
+        } else {
+          gitbook.navigateToPage?.("/");
         }
 
         onStatus("NPM embed applied.", "success");
         cleanup = () => {
-          gitbook.destroy?.();
           iframe.remove();
         };
       } catch {

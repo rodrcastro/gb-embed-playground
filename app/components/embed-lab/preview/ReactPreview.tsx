@@ -23,17 +23,21 @@ interface ReactPreviewProps {
 
 export function ReactPreview({ siteURL, sharedConfiguration, className }: ReactPreviewProps) {
   const configuration = useMemo(() => buildSharedConfiguration(sharedConfiguration), [sharedConfiguration]);
+  const greeting = {
+    title: configuration.greeting?.title ?? "",
+    subtitle: configuration.greeting?.subtitle ?? "",
+  };
 
   return (
     <GitBookProvider siteURL={siteURL}>
       <GitBookFrame
         className={className}
         tabs={configuration.tabs}
-        actions={configuration.actions}
-        greeting={configuration.greeting}
+        actions={configuration.actions as never}
+        greeting={greeting}
         suggestions={configuration.suggestions}
-        tools={configuration.tools}
-        visitor={configuration.visitor}
+        tools={configuration.tools as never}
+        visitor={configuration.visitor as never}
       />
     </GitBookProvider>
   );
