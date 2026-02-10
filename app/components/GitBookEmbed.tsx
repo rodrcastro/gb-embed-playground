@@ -15,7 +15,17 @@ const GitBookFrame = dynamic(
 export default function GitBookEmbed() {
   return (
     <GitBookProvider siteURL="https://stage.docs.rodrcastro.dev">
-      <GitBookFrame className="gitbook-embed" />
+      <GitBookFrame
+        className="gitbook-embed"
+        tabs={["assistant", "docs"]}
+        actions={[]}
+        greeting={{
+          title: "GitBook Assistant",
+          subtitle: "Ask about docs and product usage.",
+        }}
+        suggestions={[]}
+        tools={[]}
+      />
     </GitBookProvider>
   );
 }
