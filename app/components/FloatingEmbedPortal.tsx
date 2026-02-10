@@ -13,7 +13,7 @@ export default function FloatingEmbedPortal({
   }
 
   return createPortal(
-    <div className="floating-embed-shell glass-card">{children}</div>,
+    <div className="floating-embed-shell">{children}</div>,
     document.body,
   );
 }
