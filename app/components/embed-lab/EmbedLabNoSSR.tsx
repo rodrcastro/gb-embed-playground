@@ -1,11 +1,21 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { useSyncExternalStore } from "react";
+import EmbedLab from "./EmbedLab";
 
-const EmbedLab = dynamic(() => import("./EmbedLab"), {
-  ssr: false,
-});
+function useIsClient() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
 
 export default function EmbedLabNoSSR() {
+  const isClient = useIsClient();
+  if (!isClient) {
+    return null;
+  }
+
   return <EmbedLab />;
 }
