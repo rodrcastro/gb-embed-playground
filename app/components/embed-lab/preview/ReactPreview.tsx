@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { SharedConfiguration } from "../types";
 import { buildSharedConfiguration } from "../utils";
 
@@ -21,12 +21,15 @@ interface ReactPreviewProps {
   className?: string;
 }
 
-export function ReactPreview({ siteURL, sharedConfiguration, className }: ReactPreviewProps) {
+function ReactPreviewComponent({ siteURL, sharedConfiguration, className }: ReactPreviewProps) {
   const configuration = useMemo(() => buildSharedConfiguration(sharedConfiguration), [sharedConfiguration]);
-  const greeting = {
-    title: configuration.greeting?.title ?? "",
-    subtitle: configuration.greeting?.subtitle ?? "",
-  };
+  const greeting = useMemo(
+    () => ({
+      title: configuration.greeting?.title ?? "",
+      subtitle: configuration.greeting?.subtitle ?? "",
+    }),
+    [configuration.greeting?.title, configuration.greeting?.subtitle],
+  );
   const frameClassName = [className, "gitbook-embed-light-surface"].filter(Boolean).join(" ");
 
   return (
@@ -43,3 +46,5 @@ export function ReactPreview({ siteURL, sharedConfiguration, className }: ReactP
     </GitBookProvider>
   );
 }
+
+export const ReactPreview = memo(ReactPreviewComponent);
