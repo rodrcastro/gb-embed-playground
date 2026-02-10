@@ -18,6 +18,12 @@ interface GitBookRuntime {
 }
 
 interface GitBookClientRuntime {
+  getFrameURL: (options: {
+    visitor?: {
+      token?: string;
+      unsignedClaims?: Record<string, unknown>;
+    };
+  }) => string;
   createFrame: (frame: HTMLIFrameElement) => GitBookRuntime;
 }
 
@@ -52,11 +58,21 @@ export function NpmPreview({ siteURL, mode, sharedConfiguration, onStatus }: Npm
           }
         ).createGitBook;
         const gitbookClient = createGitBook({ siteURL });
+        iframe.src = gitbookClient.getFrameURL({
+          visitor: {
+            token: configuration.visitor.token,
+            unsignedClaims: configuration.visitor.user?.unsignedClaims,
+          },
+        });
+
         const gitbook = gitbookClient.createFrame(iframe);
 
         gitbook.configure({
-          ...configuration,
-          mode,
+          tabs: configuration.tabs,
+          actions: configuration.actions,
+          greeting: configuration.greeting,
+          suggestions: configuration.suggestions,
+          tools: configuration.tools,
         });
 
         if (mode === "assistant") {
@@ -69,7 +85,8 @@ export function NpmPreview({ siteURL, mode, sharedConfiguration, onStatus }: Npm
         cleanup = () => {
           iframe.remove();
         };
-      } catch {
+      } catch (error) {
+        console.error(error);
         onStatus("NPM embed failed to initialize.", "error");
       }
     }, 320);

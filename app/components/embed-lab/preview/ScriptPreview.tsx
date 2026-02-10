@@ -13,22 +13,37 @@ interface ScriptPreviewProps {
   onStatus: (message: string, level?: "info" | "success" | "error") => void;
 }
 
-interface ScriptApi {
-  unload?: () => void;
-  configure: (config: Record<string, unknown>) => void;
-}
-
-type ScriptCallback = (api: ScriptApi) => void;
+type GitBookCommand =
+  | "init"
+  | "show"
+  | "hide"
+  | "open"
+  | "close"
+  | "toggle"
+  | "navigateToPage"
+  | "navigateToAssistant"
+  | "postUserMessage"
+  | "clearChat"
+  | "configure"
+  | "unload";
 
 declare global {
   interface Window {
-    GitBook?:
-      | ((callback: ScriptCallback) => void)
-      | ScriptCallback[]
-      | {
-          q?: ScriptCallback[];
-          call?: (callback: ScriptCallback) => void;
-        };
+    GitBook?: ((command: GitBookCommand, ...args: unknown[]) => void) & {
+      q?: unknown[][];
+    };
+  }
+}
+
+function resolveGitBookScriptURL(siteURL: string): string {
+  try {
+    const url = new URL(siteURL);
+    url.pathname = `${url.pathname.endsWith("/") ? url.pathname : `${url.pathname}/`}~gitbook/embed/script.js`;
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return GITBOOK_SCRIPT_URL;
   }
 }
 
@@ -46,66 +61,74 @@ export function ScriptPreview({
 
   useEffect(() => {
     let cancelled = false;
+    const scriptURL = resolveGitBookScriptURL(siteURL);
+    const token = sharedConfiguration.visitor.token?.trim();
+    const unsignedClaims = configuration.visitor?.user?.unsignedClaims;
+    const visitorOptions =
+      token || unsignedClaims
+        ? {
+            visitor: {
+              token: token || undefined,
+              unsignedClaims,
+            },
+          }
+        : undefined;
 
-    const setup = () => {
-      const run = (fn: ScriptCallback) => {
-        if (typeof window.GitBook === "function") {
-          (window.GitBook as (callback: ScriptCallback) => void)(fn);
-          return;
-        }
+    const run = () => {
+      if (cancelled) {
+        return;
+      }
 
-        if (Array.isArray(window.GitBook)) {
-          window.GitBook.push(fn);
-          return;
-        }
+      if (typeof window.GitBook !== "function") {
+        onStatus("Script API is not available after loading script.", "error");
+        return;
+      }
 
-        if (window.GitBook && typeof window.GitBook === "object" && "q" in window.GitBook) {
-          window.GitBook.q = window.GitBook.q || [];
-          window.GitBook.q.push(fn);
-          return;
-        }
+      window.GitBook("unload");
+      window.GitBook(
+        "init",
+        { siteURL },
+        visitorOptions,
+      );
+      window.GitBook("configure", configuration);
+      window.GitBook("show");
+      window.GitBook("open");
 
-        window.GitBook = [fn];
-      };
+      if (mode === "assistant") {
+        window.GitBook("navigateToAssistant");
+      } else {
+        window.GitBook("navigateToPage", "/");
+      }
 
-      run((api: ScriptApi) => {
-        if (cancelled) {
-          return;
-        }
-
-        api.unload?.();
-        api.configure({
-          siteURL,
-          mode,
-          ...configuration,
-        });
-        onStatus("Script embed reloaded.", "success");
-      });
+      onStatus("Script embed reloaded.", "success");
     };
 
     const existingScript = document.getElementById("gitbook-embed-script") as HTMLScriptElement | null;
-    if (existingScript) {
-      setup();
+    if (existingScript && existingScript.src === scriptURL) {
+      if (typeof window.GitBook === "function") {
+        run();
+      } else {
+        existingScript.addEventListener("load", run, { once: true });
+      }
       return () => {
         cancelled = true;
+        existingScript.removeEventListener("load", run);
       };
+    }
+
+    if (existingScript) {
+      existingScript.remove();
     }
 
     const script = document.createElement("script");
     script.id = "gitbook-embed-script";
     script.async = true;
-
-    const token = sharedConfiguration.visitor.token?.trim();
-    const scriptURL = token
-      ? `${GITBOOK_SCRIPT_URL}?jwt_token=${encodeURIComponent(token)}`
-      : GITBOOK_SCRIPT_URL;
-
     script.src = scriptURL;
     script.onload = () => {
       if (cancelled) {
         return;
       }
-      setup();
+      run();
     };
     script.onerror = () => {
       if (cancelled) {
@@ -118,6 +141,9 @@ export function ScriptPreview({
 
     return () => {
       cancelled = true;
+      if (typeof window.GitBook === "function") {
+        window.GitBook("unload");
+      }
     };
   }, [siteURL, mode, configuration, onStatus, sharedConfiguration.visitor.token]);
 
