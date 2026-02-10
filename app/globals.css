@@ -111,7 +111,7 @@ body {
   border-radius: 24px;
   overflow: hidden;
   border: 1px solid var(--card-border);
-  background: #0a0a16;
+  background: #ffffff;
 }
 
 .embed-toggle {
@@ -156,16 +156,21 @@ body {
   height: min(720px, calc(100vh - 1.5rem));
   padding: 0;
   border-radius: 24px;
-  background: #0a0a16;
+  background: #ffffff;
   border: 1px solid var(--card-border);
   box-shadow: 0 24px 60px rgba(6, 6, 16, 0.6);
   overflow: hidden;
+  isolation: isolate;
 }
 
 .floating-embed-shell .gb-demo-frame {
   height: 100%;
   border: 0;
   border-radius: 0;
+  background: #ffffff;
+  opacity: 1;
+  filter: none;
+  mix-blend-mode: normal;
 }
 
 @keyframes fade-up {
