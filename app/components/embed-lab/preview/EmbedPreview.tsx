@@ -23,7 +23,15 @@ export function EmbedPreview({
   onStatus,
 }: EmbedPreviewProps) {
   if (implementation === "react") {
-    return <ReactPreview siteURL={siteURL} sharedConfiguration={sharedConfiguration} className="gitbook-embed" />;
+    return (
+      <ReactPreview
+        siteURL={siteURL}
+        mode={mode}
+        sharedConfiguration={sharedConfiguration}
+        className="gitbook-embed"
+        onStatus={onStatus}
+      />
+    );
   }
 
   if (implementation === "npm") {
