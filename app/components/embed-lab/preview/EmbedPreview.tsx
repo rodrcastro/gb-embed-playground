@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useProviderAuthBootstrap } from "../auth/useProviderAuthBootstrap";
 import { EmbedImplementation, ScriptOnlyConfiguration, SharedConfiguration } from "../types";
 import { resolveVisitorAuthMode } from "../utils";
@@ -24,6 +25,7 @@ export function EmbedPreview({
   scriptOnlyConfiguration,
   onStatus,
 }: EmbedPreviewProps) {
+  const [manualRefreshRevision, setManualRefreshRevision] = useState(0);
   const authMode = resolveVisitorAuthMode(sharedConfiguration.visitor);
   const isProviderMode = authMode === "provider-integration";
   const {
@@ -45,13 +47,25 @@ export function EmbedPreview({
         ? "error"
         : "";
   const isAuthenticating = authState === "authenticating";
-  const canStartSignIn = authState === "needs-signin" || authState === "error";
+  const previewRevision = `${authRevision}-${manualRefreshRevision}`;
+  const providerStatusMessage =
+    authState === "authenticating"
+      ? "Waiting for provider sign-in to complete. Once sign-in is done, click Refresh."
+      : authMessage ||
+        (authState === "ready"
+          ? "Authenticated with provider."
+          : "Sign in with your provider to access authenticated content.");
+
+  const refreshEmbed = () => {
+    setManualRefreshRevision((previous) => previous + 1);
+    onStatus("Embed refreshed.", "info");
+  };
 
   let preview: React.ReactNode;
   if (implementation === "react") {
     preview = (
       <ReactPreview
-        key={`react-${authRevision}`}
+        key={`react-${previewRevision}`}
         siteURL={siteURL}
         mode={mode}
         sharedConfiguration={sharedConfiguration}
@@ -63,7 +77,7 @@ export function EmbedPreview({
   } else if (implementation === "npm") {
     preview = (
       <NpmPreview
-        key={`npm-${authRevision}`}
+        key={`npm-${previewRevision}`}
         siteURL={siteURL}
         mode={mode}
         sharedConfiguration={sharedConfiguration}
@@ -74,7 +88,7 @@ export function EmbedPreview({
   } else {
     preview = (
       <ScriptPreview
-        key={`script-${authRevision}`}
+        key={`script-${previewRevision}`}
         siteURL={siteURL}
         mode={mode}
         sharedConfiguration={sharedConfiguration}
@@ -90,25 +104,14 @@ export function EmbedPreview({
       {isProviderMode ? (
         <div className="lab-panel stack-tight">
           <p className="lab-panel-title no-margin">Provider authentication</p>
-          <p className={`lab-status-inline ${providerStatusClass}`}>
-            {authMessage ||
-              (authState === "ready"
-                ? "Authenticated with provider."
-                : authState === "authenticating"
-                  ? "Waiting for provider sign-in..."
-                  : "Sign in with your provider to access authenticated content.")}
-          </p>
+          <p className={`lab-status-inline ${providerStatusClass}`}>{providerStatusMessage}</p>
           <div className="lab-row">
-            {canStartSignIn ? (
-              <button type="button" className="lab-button" onClick={startSignIn}>
-                Sign in with provider
-              </button>
-            ) : null}
-            {isAuthenticating ? (
-              <button type="button" className="lab-button" disabled>
-                Waiting for sign-in...
-              </button>
-            ) : null}
+            <button type="button" className="lab-button" onClick={startSignIn} disabled={isAuthenticating}>
+              Sign in with provider
+            </button>
+            <button type="button" className="lab-button ghost" onClick={refreshEmbed}>
+              Refresh
+            </button>
           </div>
         </div>
       ) : null}
