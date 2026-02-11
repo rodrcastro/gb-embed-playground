@@ -5,12 +5,6 @@ import { useEffect } from "react";
 const SITE_URL = "https://stage.docs.rodrcastro.dev";
 const SCRIPT_SRC = `${SITE_URL}/~gitbook/embed/script.js`;
 
-declare global {
-  interface Window {
-    GitBook?: (command: string, ...args: unknown[]) => void;
-  }
-}
-
 export default function GitBookEmbedScript() {
   useEffect(() => {
     let isDisposed = false;
