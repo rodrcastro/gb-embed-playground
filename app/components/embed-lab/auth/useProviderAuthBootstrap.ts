@@ -7,6 +7,7 @@ import { resolveVisitorAuthMode, resolveVisitorJWTToken } from "../utils";
 export const GITBOOK_VISITOR_COOKIE_NAME = "gitbook-visitor-token";
 export const AUTH_POLL_INTERVAL_MS = 800;
 export const AUTH_TIMEOUT_MS = 120000;
+export const AUTH_POST_CLOSE_GRACE_MS = 8000;
 const AUTH_POPUP_FEATURES = "popup,width=520,height=760";
 
 export type ProviderAuthState = "ready" | "needs-signin" | "authenticating" | "error";
@@ -170,17 +171,7 @@ export function useProviderAuthBootstrap({
     }
 
     const syncOnReturn = () => {
-      if (tryCompleteWithCookieToken("Authenticated with provider. Preview refreshed.")) {
-        return;
-      }
-
-      if (state === "authenticating" && popupRef.current?.closed) {
-        stopPolling();
-        popupRef.current = null;
-        setState("needs-signin");
-        setMessage("Sign-in popup closed before token detection. Try again if needed.");
-        onStatus("Sign-in popup closed before authentication token was detected.", "info");
-      }
+      tryCompleteWithCookieToken("Authenticated with provider. Preview refreshed.");
     };
 
     const onVisibilityChange = () => {
@@ -196,7 +187,7 @@ export function useProviderAuthBootstrap({
       window.removeEventListener("focus", syncOnReturn);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [authMode, onStatus, state, stopPolling, tryCompleteWithCookieToken]);
+  }, [authMode, tryCompleteWithCookieToken]);
 
   const startSignIn = useCallback(() => {
     if (authMode === "manual-jwt") {
@@ -238,16 +229,25 @@ export function useProviderAuthBootstrap({
     onStatus("Provider sign-in popup opened. Complete authentication to continue.", "info");
 
     const startedAt = Date.now();
+    let popupClosedAt: number | undefined;
     intervalRef.current = window.setInterval(() => {
       if (tryCompleteWithCookieToken("Authenticated with provider. Preview refreshed.")) {
         return;
       }
 
       if (popup.closed) {
-        stopPolling();
         popupRef.current = null;
+        if (!popupClosedAt) {
+          popupClosedAt = Date.now();
+          return;
+        }
+        if (Date.now() - popupClosedAt < AUTH_POST_CLOSE_GRACE_MS) {
+          return;
+        }
+
+        stopPolling();
         setState("needs-signin");
-        setMessage("Sign-in popup closed before token detection. Try again if needed.");
+        setMessage("Sign-in popup closed before authentication token was detected. Try again.");
         onStatus("Sign-in popup closed before authentication token was detected.", "info");
         return;
       }
