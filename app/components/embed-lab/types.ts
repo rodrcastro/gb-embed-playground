@@ -1,6 +1,7 @@
 export type EmbedImplementation = "react" | "npm" | "script";
 
 export type EmbedMode = "assistant" | "docs";
+export type VisitorAuthMode = "manual-jwt" | "provider-integration";
 
 export interface GreetingConfig {
   title?: string;
@@ -24,6 +25,9 @@ export interface ToolConfig {
 }
 
 export interface VisitorConfig {
+  authMode?: VisitorAuthMode;
+  jwt_token?: string;
+  // Backward compatibility for older persisted payloads.
   token?: string;
   uuid?: string;
   traitsJson?: string;

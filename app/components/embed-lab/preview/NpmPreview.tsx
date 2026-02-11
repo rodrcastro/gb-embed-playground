@@ -2,12 +2,13 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { SharedConfiguration } from "../types";
-import { buildSharedConfiguration } from "../utils";
+import { buildSharedConfiguration, withJWTTokenQueryParameter } from "../utils";
 
 interface NpmPreviewProps {
   siteURL: string;
   mode: "assistant" | "docs";
   sharedConfiguration: SharedConfiguration;
+  effectiveJWTToken?: string;
   onStatus: (message: string, level?: "info" | "success" | "error") => void;
 }
 
@@ -20,14 +21,19 @@ interface GitBookRuntime {
 interface GitBookClientRuntime {
   getFrameURL: (options: {
     visitor?: {
-      token?: string;
       unsignedClaims?: Record<string, unknown>;
     };
   }) => string;
   createFrame: (frame: HTMLIFrameElement) => GitBookRuntime;
 }
 
-export function NpmPreview({ siteURL, mode, sharedConfiguration, onStatus }: NpmPreviewProps) {
+export function NpmPreview({
+  siteURL,
+  mode,
+  sharedConfiguration,
+  effectiveJWTToken,
+  onStatus,
+}: NpmPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const configuration = useMemo(() => buildSharedConfiguration(sharedConfiguration), [sharedConfiguration]);
 
@@ -58,12 +64,12 @@ export function NpmPreview({ siteURL, mode, sharedConfiguration, onStatus }: Npm
           }
         ).createGitBook;
         const gitbookClient = createGitBook({ siteURL });
-        iframe.src = gitbookClient.getFrameURL({
+        const frameURL = gitbookClient.getFrameURL({
           visitor: {
-            token: configuration.visitor.token,
             unsignedClaims: configuration.visitor.user?.unsignedClaims,
           },
         });
+        iframe.src = withJWTTokenQueryParameter(frameURL, effectiveJWTToken);
 
         const gitbook = gitbookClient.createFrame(iframe);
 
@@ -96,7 +102,7 @@ export function NpmPreview({ siteURL, mode, sharedConfiguration, onStatus }: Npm
       window.clearTimeout(timer);
       cleanup?.();
     };
-  }, [siteURL, configuration, mode, onStatus]);
+  }, [siteURL, configuration, mode, onStatus, effectiveJWTToken]);
 
   return <div ref={containerRef} className="gitbook-embed gitbook-embed-light-surface" />;
 }

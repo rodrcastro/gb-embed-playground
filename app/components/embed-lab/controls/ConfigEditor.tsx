@@ -470,21 +470,47 @@ export function ConfigEditor({
           onToggle={toggleSection}
         >
           <label className="lab-field">
-            <span>token</span>
-            <input
+            <span>authMode</span>
+            <select
               className="lab-input"
-              value={sharedConfiguration.visitor.token || ""}
+              value={sharedConfiguration.visitor.authMode || "manual-jwt"}
               onChange={(event) =>
                 onSharedConfigurationChange({
                   ...sharedConfiguration,
                   visitor: {
                     ...sharedConfiguration.visitor,
-                    token: event.target.value,
+                    authMode: event.target.value as "manual-jwt" | "provider-integration",
                   },
                 })
               }
-            />
+            >
+              <option value="manual-jwt">manual-jwt</option>
+              <option value="provider-integration">provider-integration</option>
+            </select>
           </label>
+          {(sharedConfiguration.visitor.authMode || "manual-jwt") === "manual-jwt" ? (
+            <label className="lab-field">
+              <span>jwt_token</span>
+              <input
+                className="lab-input"
+                value={sharedConfiguration.visitor.jwt_token || sharedConfiguration.visitor.token || ""}
+                onChange={(event) =>
+                  onSharedConfigurationChange({
+                    ...sharedConfiguration,
+                    visitor: {
+                      ...sharedConfiguration.visitor,
+                      jwt_token: event.target.value,
+                      token: undefined,
+                    },
+                  })
+                }
+              />
+            </label>
+          ) : (
+            <p className="lab-muted-note">
+              Token is obtained from GitBook auth cookie after sign-in popup.
+            </p>
+          )}
           <label className="lab-field">
             <span>uuid</span>
             <input

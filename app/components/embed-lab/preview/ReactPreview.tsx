@@ -3,7 +3,7 @@
 import { GitBookProvider, useGitBook } from "@gitbook/embed/react";
 import { memo, useEffect, useMemo, useRef } from "react";
 import { SharedConfiguration } from "../types";
-import { buildSharedConfiguration } from "../utils";
+import { buildSharedConfiguration, withJWTTokenQueryParameter } from "../utils";
 
 type BuiltConfiguration = ReturnType<typeof buildSharedConfiguration>;
 
@@ -11,6 +11,7 @@ interface ReactPreviewProps {
   siteURL: string;
   mode: "assistant" | "docs";
   sharedConfiguration: SharedConfiguration;
+  effectiveJWTToken?: string;
   className?: string;
   onStatus?: (message: string, level?: "info" | "success" | "error") => void;
 }
@@ -18,24 +19,32 @@ interface ReactPreviewProps {
 interface ReactPreviewFrameProps {
   mode: "assistant" | "docs";
   configuration: BuiltConfiguration;
+  effectiveJWTToken?: string;
   className?: string;
   onStatus?: (message: string, level?: "info" | "success" | "error") => void;
 }
 
-function ReactPreviewFrame({ mode, configuration, className, onStatus }: ReactPreviewFrameProps) {
+function ReactPreviewFrame({
+  mode,
+  configuration,
+  effectiveJWTToken,
+  className,
+  onStatus,
+}: ReactPreviewFrameProps) {
   const gitbook = useGitBook();
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const frameRef = useRef<ReturnType<typeof gitbook.createFrame> | null>(null);
 
   const frameURL = useMemo(
-    () =>
-      gitbook.getFrameURL({
+    () => {
+      const url = gitbook.getFrameURL({
         visitor: {
-          token: configuration.visitor.token,
           unsignedClaims: configuration.visitor.user?.unsignedClaims,
         },
-      }),
-    [gitbook, configuration.visitor.token, configuration.visitor.user?.unsignedClaims],
+      });
+      return withJWTTokenQueryParameter(url, effectiveJWTToken);
+    },
+    [gitbook, effectiveJWTToken, configuration.visitor.user?.unsignedClaims],
   );
 
   useEffect(() => {
@@ -75,7 +84,14 @@ function ReactPreviewFrame({ mode, configuration, className, onStatus }: ReactPr
   return <iframe ref={iframeRef} title="GitBook" src={frameURL} width="100%" height="100%" className={className} />;
 }
 
-function ReactPreviewComponent({ siteURL, mode, sharedConfiguration, className, onStatus }: ReactPreviewProps) {
+function ReactPreviewComponent({
+  siteURL,
+  mode,
+  sharedConfiguration,
+  effectiveJWTToken,
+  className,
+  onStatus,
+}: ReactPreviewProps) {
   const configuration = useMemo(() => buildSharedConfiguration(sharedConfiguration), [sharedConfiguration]);
   const frameClassName = [className, "gitbook-embed-light-surface"].filter(Boolean).join(" ");
 
@@ -84,6 +100,7 @@ function ReactPreviewComponent({ siteURL, mode, sharedConfiguration, className, 
       <ReactPreviewFrame
         mode={mode}
         configuration={configuration}
+        effectiveJWTToken={effectiveJWTToken}
         className={frameClassName}
         onStatus={onStatus}
       />
