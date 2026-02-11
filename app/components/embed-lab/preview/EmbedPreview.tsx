@@ -26,7 +26,13 @@ export function EmbedPreview({
 }: EmbedPreviewProps) {
   const authMode = resolveVisitorAuthMode(sharedConfiguration.visitor);
   const isProviderMode = authMode === "provider-integration";
-  const { effectiveJWTToken, state: authState, message: authMessage, startSignIn } = useProviderAuthBootstrap({
+  const {
+    effectiveJWTToken,
+    state: authState,
+    message: authMessage,
+    authRevision,
+    startSignIn,
+  } = useProviderAuthBootstrap({
     siteURL,
     visitor: sharedConfiguration.visitor,
     onStatus,
@@ -45,6 +51,7 @@ export function EmbedPreview({
   if (implementation === "react") {
     preview = (
       <ReactPreview
+        key={`react-${authRevision}`}
         siteURL={siteURL}
         mode={mode}
         sharedConfiguration={sharedConfiguration}
@@ -56,6 +63,7 @@ export function EmbedPreview({
   } else if (implementation === "npm") {
     preview = (
       <NpmPreview
+        key={`npm-${authRevision}`}
         siteURL={siteURL}
         mode={mode}
         sharedConfiguration={sharedConfiguration}
@@ -66,6 +74,7 @@ export function EmbedPreview({
   } else {
     preview = (
       <ScriptPreview
+        key={`script-${authRevision}`}
         siteURL={siteURL}
         mode={mode}
         sharedConfiguration={sharedConfiguration}

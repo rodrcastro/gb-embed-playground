@@ -25,4 +25,9 @@ describe("provider auth helpers", () => {
     expect(resolveSignInURL("http://docs.example.com/path")).toBeUndefined();
     expect(resolveSignInURL("http://localhost:3000/path")).toBe("http://localhost:3000/path/");
   });
+
+  it("supports the current cookie name used by provider auth bootstrap", () => {
+    const cookieString = "gitbook-visitor-token=jwt-value";
+    expect(readCookieValueFromString(cookieString, "gitbook-visitor-token")).toBe("jwt-value");
+  });
 });

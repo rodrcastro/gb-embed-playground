@@ -7,7 +7,6 @@ import { resolveVisitorAuthMode, resolveVisitorJWTToken } from "../utils";
 export const GITBOOK_VISITOR_COOKIE_NAME = "gitbook-visitor-token";
 export const AUTH_POLL_INTERVAL_MS = 800;
 export const AUTH_TIMEOUT_MS = 120000;
-export const AUTH_POST_CLOSE_GRACE_MS = 8000;
 const AUTH_POPUP_FEATURES = "popup,width=520,height=760";
 
 export type ProviderAuthState = "ready" | "needs-signin" | "authenticating" | "error";
@@ -22,6 +21,7 @@ interface UseProviderAuthBootstrapResult {
   effectiveJWTToken?: string;
   state: ProviderAuthState;
   message?: string;
+  authRevision: number;
   startSignIn: () => void;
 }
 
@@ -91,6 +91,7 @@ export function useProviderAuthBootstrap({
       ? readCookieValue(GITBOOK_VISITOR_COOKIE_NAME)
       : undefined;
   const [providerJWTToken, setProviderJWTToken] = useState<string | undefined>(initialProviderToken);
+  const [authRevision, setAuthRevision] = useState(0);
   const [state, setState] = useState<ProviderAuthState>(() => {
     if (authMode === "manual-jwt") {
       return "ready";
@@ -129,6 +130,7 @@ export function useProviderAuthBootstrap({
   const completeWithProviderToken = useCallback(
     (token: string, statusMessage?: string) => {
       setProviderJWTToken(token);
+      setAuthRevision((previous) => previous + 1);
       setState("ready");
       setMessage("Authenticated with provider.");
       if (statusMessage) {
@@ -139,6 +141,15 @@ export function useProviderAuthBootstrap({
     },
     [closePopup, onStatus, stopPolling],
   );
+
+  const handlePopupClosedWithoutDetectedToken = useCallback(() => {
+    stopPolling();
+    popupRef.current = null;
+    setAuthRevision((previous) => previous + 1);
+    setState("needs-signin");
+    setMessage("Sign-in window closed. Session refresh applied. If still unauthenticated, try again.");
+    onStatus("Sign-in window closed. Refreshed embed session.", "info");
+  }, [onStatus, stopPolling]);
 
   const tryCompleteWithCookieToken = useCallback(
     (statusMessage?: string) => {
@@ -171,7 +182,13 @@ export function useProviderAuthBootstrap({
     }
 
     const syncOnReturn = () => {
-      tryCompleteWithCookieToken("Authenticated with provider. Preview refreshed.");
+      if (tryCompleteWithCookieToken("Authenticated with provider. Preview refreshed.")) {
+        return;
+      }
+
+      if (state === "authenticating" && popupRef.current?.closed) {
+        handlePopupClosedWithoutDetectedToken();
+      }
     };
 
     const onVisibilityChange = () => {
@@ -187,7 +204,7 @@ export function useProviderAuthBootstrap({
       window.removeEventListener("focus", syncOnReturn);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [authMode, tryCompleteWithCookieToken]);
+  }, [authMode, handlePopupClosedWithoutDetectedToken, state, tryCompleteWithCookieToken]);
 
   const startSignIn = useCallback(() => {
     if (authMode === "manual-jwt") {
@@ -229,26 +246,13 @@ export function useProviderAuthBootstrap({
     onStatus("Provider sign-in popup opened. Complete authentication to continue.", "info");
 
     const startedAt = Date.now();
-    let popupClosedAt: number | undefined;
     intervalRef.current = window.setInterval(() => {
       if (tryCompleteWithCookieToken("Authenticated with provider. Preview refreshed.")) {
         return;
       }
 
       if (popup.closed) {
-        popupRef.current = null;
-        if (!popupClosedAt) {
-          popupClosedAt = Date.now();
-          return;
-        }
-        if (Date.now() - popupClosedAt < AUTH_POST_CLOSE_GRACE_MS) {
-          return;
-        }
-
-        stopPolling();
-        setState("needs-signin");
-        setMessage("Sign-in popup closed before authentication token was detected. Try again.");
-        onStatus("Sign-in popup closed before authentication token was detected.", "info");
+        handlePopupClosedWithoutDetectedToken();
         return;
       }
 
@@ -260,7 +264,16 @@ export function useProviderAuthBootstrap({
         onStatus("Timed out waiting for provider authentication.", "error");
       }
     }, AUTH_POLL_INTERVAL_MS);
-  }, [authMode, closePopup, onStatus, siteURL, state, stopPolling, tryCompleteWithCookieToken]);
+  }, [
+    authMode,
+    closePopup,
+    handlePopupClosedWithoutDetectedToken,
+    onStatus,
+    siteURL,
+    state,
+    stopPolling,
+    tryCompleteWithCookieToken,
+  ]);
 
   const effectiveJWTToken = useMemo(() => {
     if (authMode === "provider-integration") {
@@ -298,6 +311,7 @@ export function useProviderAuthBootstrap({
     effectiveJWTToken,
     state: resolvedState,
     message: resolvedMessage,
+    authRevision,
     startSignIn,
   };
 }
