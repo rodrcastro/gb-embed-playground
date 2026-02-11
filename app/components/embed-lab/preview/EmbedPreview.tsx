@@ -34,6 +34,7 @@ export function EmbedPreview({
     message: authMessage,
     authRevision,
     startSignIn,
+    resetSignInState,
   } = useProviderAuthBootstrap({
     siteURL,
     visitor: sharedConfiguration.visitor,
@@ -57,8 +58,9 @@ export function EmbedPreview({
           : "Sign in with your provider to access authenticated content.");
 
   const refreshEmbed = () => {
+    resetSignInState();
     setManualRefreshRevision((previous) => previous + 1);
-    onStatus("Embed refreshed.", "info");
+    onStatus("Embed refreshed. Sign in again to continue.", "info");
   };
 
   let preview: React.ReactNode;

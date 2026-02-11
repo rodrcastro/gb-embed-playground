@@ -23,6 +23,7 @@ interface UseProviderAuthBootstrapResult {
   message?: string;
   authRevision: number;
   startSignIn: () => void;
+  resetSignInState: () => void;
 }
 
 export function readCookieValueFromString(cookieString: string, cookieName: string): string | undefined {
@@ -254,6 +255,17 @@ export function useProviderAuthBootstrap({
     tryCompleteWithCookieToken,
   ]);
 
+  const resetSignInState = useCallback(() => {
+    if (authMode !== "provider-integration") {
+      return;
+    }
+
+    stopPolling();
+    closePopup();
+    setState("needs-signin");
+    setMessage("Sign in with your provider to access authenticated content.");
+  }, [authMode, closePopup, stopPolling]);
+
   const effectiveJWTToken = useMemo(() => {
     if (authMode === "provider-integration") {
       const cookieToken = readCookieValue(GITBOOK_VISITOR_COOKIE_NAME);
@@ -292,5 +304,6 @@ export function useProviderAuthBootstrap({
     message: resolvedMessage,
     authRevision,
     startSignIn,
+    resetSignInState,
   };
 }
