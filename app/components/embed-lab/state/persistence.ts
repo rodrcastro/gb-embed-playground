@@ -15,7 +15,7 @@ function decodeBase64Url(input: string): string {
 }
 
 export function serializeStateToParam(state: PlaygroundState): string {
-  return encodeBase64Url(JSON.stringify(state));
+  return encodeBase64Url(JSON.stringify(stripSensitiveStateForPersistence(state)));
 }
 
 export function deserializeStateFromParam(value: string): PlaygroundState | null {
@@ -47,8 +47,9 @@ export function writeStateToUrl(state: PlaygroundState): void {
     return;
   }
 
+  const safeState = stripSensitiveStateForPersistence(state);
   const url = new URL(window.location.href);
-  url.searchParams.set(URL_STATE_PARAM, serializeStateToParam(state));
+  url.searchParams.set(URL_STATE_PARAM, serializeStateToParam(safeState));
   window.history.replaceState({}, "", url.toString());
 }
 
@@ -74,7 +75,7 @@ export function writeStateToLocalStorage(state: PlaygroundState): void {
     return;
   }
 
-  window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(state));
+  window.localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(stripSensitiveStateForPersistence(state)));
 }
 
 export function clearPersistedState(): void {
@@ -86,4 +87,18 @@ export function clearPersistedState(): void {
   url.searchParams.delete(URL_STATE_PARAM);
   window.history.replaceState({}, "", url.toString());
   window.localStorage.removeItem(LOCAL_STORAGE_KEY);
+}
+
+export function stripSensitiveStateForPersistence(state: PlaygroundState): PlaygroundState {
+  return {
+    ...state,
+    sharedConfiguration: {
+      ...state.sharedConfiguration,
+      visitor: {
+        ...state.sharedConfiguration.visitor,
+        jwt_token: undefined,
+        token: undefined,
+      },
+    },
+  };
 }

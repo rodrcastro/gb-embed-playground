@@ -5,6 +5,7 @@ import {
   SharedConfiguration,
   ToolConfig,
   ValidationResult,
+  VisitorAuthMode,
   VisitorConfig,
 } from "./types";
 
@@ -39,14 +40,21 @@ function parseToolInputSchema(tool: ToolConfig): Record<string, unknown> | undef
   };
 }
 
+export function resolveVisitorAuthMode(visitor: VisitorConfig | undefined): VisitorAuthMode {
+  return visitor?.authMode === "provider-integration" ? "provider-integration" : "manual-jwt";
+}
+
 function normalizeVisitorConfig(visitor: VisitorConfig | undefined): VisitorConfig {
   if (!visitor) {
-    return {};
+    return {
+      authMode: "manual-jwt",
+    };
   }
 
   const jwtToken = typeof visitor.jwt_token === "string" ? visitor.jwt_token : visitor.token;
   const normalized: VisitorConfig = {
     ...visitor,
+    authMode: resolveVisitorAuthMode(visitor),
     jwt_token: jwtToken,
   };
 
@@ -130,6 +138,7 @@ export function buildVisitor(visitor: VisitorConfig) {
   const unsignedClaims = parseJsonObject(visitor.unsignedClaimsJson);
 
   return {
+    authMode: resolveVisitorAuthMode(visitor),
     jwt_token: jwtToken,
     user: {
       uuid: visitor.uuid || undefined,

@@ -8,6 +8,7 @@ interface NpmPreviewProps {
   siteURL: string;
   mode: "assistant" | "docs";
   sharedConfiguration: SharedConfiguration;
+  effectiveJWTToken?: string;
   onStatus: (message: string, level?: "info" | "success" | "error") => void;
 }
 
@@ -26,7 +27,13 @@ interface GitBookClientRuntime {
   createFrame: (frame: HTMLIFrameElement) => GitBookRuntime;
 }
 
-export function NpmPreview({ siteURL, mode, sharedConfiguration, onStatus }: NpmPreviewProps) {
+export function NpmPreview({
+  siteURL,
+  mode,
+  sharedConfiguration,
+  effectiveJWTToken,
+  onStatus,
+}: NpmPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const configuration = useMemo(() => buildSharedConfiguration(sharedConfiguration), [sharedConfiguration]);
 
@@ -62,7 +69,7 @@ export function NpmPreview({ siteURL, mode, sharedConfiguration, onStatus }: Npm
             unsignedClaims: configuration.visitor.user?.unsignedClaims,
           },
         });
-        iframe.src = withJWTTokenQueryParameter(frameURL, configuration.visitor.jwt_token);
+        iframe.src = withJWTTokenQueryParameter(frameURL, effectiveJWTToken);
 
         const gitbook = gitbookClient.createFrame(iframe);
 
@@ -95,7 +102,7 @@ export function NpmPreview({ siteURL, mode, sharedConfiguration, onStatus }: Npm
       window.clearTimeout(timer);
       cleanup?.();
     };
-  }, [siteURL, configuration, mode, onStatus]);
+  }, [siteURL, configuration, mode, onStatus, effectiveJWTToken]);
 
   return <div ref={containerRef} className="gitbook-embed gitbook-embed-light-surface" />;
 }

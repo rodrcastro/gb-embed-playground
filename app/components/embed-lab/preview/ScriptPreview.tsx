@@ -3,13 +3,14 @@
 import { useEffect, useMemo } from "react";
 import { GITBOOK_SCRIPT_URL } from "../defaults";
 import { ScriptOnlyConfiguration, SharedConfiguration } from "../types";
-import { buildScriptConfiguration, resolveVisitorJWTToken } from "../utils";
+import { buildScriptConfiguration } from "../utils";
 
 interface ScriptPreviewProps {
   siteURL: string;
   mode: "assistant" | "docs";
   sharedConfiguration: SharedConfiguration;
   scriptOnlyConfiguration: ScriptOnlyConfiguration;
+  effectiveJWTToken?: string;
   onStatus: (message: string, level?: "info" | "success" | "error") => void;
 }
 
@@ -86,6 +87,7 @@ export function ScriptPreview({
   mode,
   sharedConfiguration,
   scriptOnlyConfiguration,
+  effectiveJWTToken,
   onStatus,
 }: ScriptPreviewProps) {
   const configuration = useMemo(
@@ -96,7 +98,7 @@ export function ScriptPreview({
   useEffect(() => {
     let cancelled = false;
     const scriptURL = resolveGitBookScriptURL(siteURL);
-    const jwtToken = resolveVisitorJWTToken(sharedConfiguration.visitor);
+    const jwtToken = effectiveJWTToken;
     const unsignedClaims = configuration.visitor?.user?.unsignedClaims;
     const visitorOptions =
       jwtToken || unsignedClaims
@@ -177,7 +179,7 @@ export function ScriptPreview({
       cancelled = true;
       cleanupGitBookScriptWidget();
     };
-  }, [siteURL, mode, configuration, onStatus, sharedConfiguration.visitor]);
+  }, [siteURL, mode, configuration, onStatus, effectiveJWTToken]);
 
   return <div className="gitbook-embed script-mode" />;
 }
