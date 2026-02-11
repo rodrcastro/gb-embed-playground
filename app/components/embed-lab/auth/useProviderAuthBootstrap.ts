@@ -142,15 +142,6 @@ export function useProviderAuthBootstrap({
     [closePopup, onStatus, stopPolling],
   );
 
-  const handlePopupClosedWithoutDetectedToken = useCallback(() => {
-    stopPolling();
-    popupRef.current = null;
-    setAuthRevision((previous) => previous + 1);
-    setState("needs-signin");
-    setMessage("Sign-in window closed. Session refresh applied. If still unauthenticated, try again.");
-    onStatus("Sign-in window closed. Refreshed embed session.", "info");
-  }, [onStatus, stopPolling]);
-
   const tryCompleteWithCookieToken = useCallback(
     (statusMessage?: string) => {
       const cookieToken = readCookieValue(GITBOOK_VISITOR_COOKIE_NAME);
@@ -182,13 +173,7 @@ export function useProviderAuthBootstrap({
     }
 
     const syncOnReturn = () => {
-      if (tryCompleteWithCookieToken("Authenticated with provider. Preview refreshed.")) {
-        return;
-      }
-
-      if (state === "authenticating" && popupRef.current?.closed) {
-        handlePopupClosedWithoutDetectedToken();
-      }
+      tryCompleteWithCookieToken("Authenticated with provider. Preview refreshed.");
     };
 
     const onVisibilityChange = () => {
@@ -204,7 +189,7 @@ export function useProviderAuthBootstrap({
       window.removeEventListener("focus", syncOnReturn);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
-  }, [authMode, handlePopupClosedWithoutDetectedToken, state, tryCompleteWithCookieToken]);
+  }, [authMode, tryCompleteWithCookieToken]);
 
   const startSignIn = useCallback(() => {
     if (authMode === "manual-jwt") {
@@ -251,11 +236,6 @@ export function useProviderAuthBootstrap({
         return;
       }
 
-      if (popup.closed) {
-        handlePopupClosedWithoutDetectedToken();
-        return;
-      }
-
       if (Date.now() - startedAt >= AUTH_TIMEOUT_MS) {
         stopPolling();
         closePopup();
@@ -267,7 +247,6 @@ export function useProviderAuthBootstrap({
   }, [
     authMode,
     closePopup,
-    handlePopupClosedWithoutDetectedToken,
     onStatus,
     siteURL,
     state,
