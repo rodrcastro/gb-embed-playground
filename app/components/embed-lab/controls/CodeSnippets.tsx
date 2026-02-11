@@ -99,20 +99,18 @@ function signInWithProvider(${signInArg})${signInReturn} {
       const token = readCookieValue(GITBOOK_VISITOR_COOKIE_NAME);
       if (token) {
         window.clearInterval(interval);
-        if (!popup.closed) popup.close();
+        try {
+          popup.close();
+        } catch {}
         resolve(token);
-        return;
-      }
-
-      if (popup.closed) {
-        window.clearInterval(interval);
-        reject(new Error("Sign-in popup closed before authentication completed."));
         return;
       }
 
       if (Date.now() - startedAt >= AUTH_TIMEOUT_MS) {
         window.clearInterval(interval);
-        if (!popup.closed) popup.close();
+        try {
+          popup.close();
+        } catch {}
         reject(new Error("Timed out waiting for provider authentication."));
       }
     }, AUTH_POLL_INTERVAL_MS);

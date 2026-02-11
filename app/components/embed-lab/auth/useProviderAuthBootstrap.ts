@@ -115,8 +115,12 @@ export function useProviderAuthBootstrap({
   }, []);
 
   const closePopup = useCallback(() => {
-    if (popupRef.current && !popupRef.current.closed) {
-      popupRef.current.close();
+    if (popupRef.current) {
+      try {
+        popupRef.current.close();
+      } catch {
+        // Best effort close when cross-origin policies sever opener state.
+      }
     }
     popupRef.current = null;
   }, []);
@@ -149,6 +153,9 @@ export function useProviderAuthBootstrap({
 
   const startSignIn = useCallback(() => {
     if (authMode === "manual-jwt") {
+      return;
+    }
+    if (state === "authenticating") {
       return;
     }
 
@@ -191,15 +198,6 @@ export function useProviderAuthBootstrap({
         return;
       }
 
-      if (popup.closed) {
-        stopPolling();
-        popupRef.current = null;
-        setState("error");
-        setMessage("Sign-in popup closed before authentication completed. Try again.");
-        onStatus("Provider sign-in was canceled before completion.", "error");
-        return;
-      }
-
       if (Date.now() - startedAt >= AUTH_TIMEOUT_MS) {
         stopPolling();
         closePopup();
@@ -208,7 +206,7 @@ export function useProviderAuthBootstrap({
         onStatus("Timed out waiting for provider authentication.", "error");
       }
     }, AUTH_POLL_INTERVAL_MS);
-  }, [authMode, closePopup, completeWithProviderToken, onStatus, siteURL, stopPolling]);
+  }, [authMode, closePopup, completeWithProviderToken, onStatus, siteURL, state, stopPolling]);
 
   const effectiveJWTToken = useMemo(() => {
     if (authMode === "provider-integration") {
