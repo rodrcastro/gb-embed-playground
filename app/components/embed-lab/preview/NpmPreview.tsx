@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import { SharedConfiguration } from "../types";
-import { buildSharedConfiguration } from "../utils";
+import { buildSharedConfiguration, withJWTTokenQueryParameter } from "../utils";
 
 interface NpmPreviewProps {
   siteURL: string;
@@ -20,7 +20,6 @@ interface GitBookRuntime {
 interface GitBookClientRuntime {
   getFrameURL: (options: {
     visitor?: {
-      token?: string;
       unsignedClaims?: Record<string, unknown>;
     };
   }) => string;
@@ -58,12 +57,12 @@ export function NpmPreview({ siteURL, mode, sharedConfiguration, onStatus }: Npm
           }
         ).createGitBook;
         const gitbookClient = createGitBook({ siteURL });
-        iframe.src = gitbookClient.getFrameURL({
+        const frameURL = gitbookClient.getFrameURL({
           visitor: {
-            token: configuration.visitor.token,
             unsignedClaims: configuration.visitor.user?.unsignedClaims,
           },
         });
+        iframe.src = withJWTTokenQueryParameter(frameURL, configuration.visitor.jwt_token);
 
         const gitbook = gitbookClient.createFrame(iframe);
 

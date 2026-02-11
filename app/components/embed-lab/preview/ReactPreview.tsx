@@ -3,7 +3,7 @@
 import { GitBookProvider, useGitBook } from "@gitbook/embed/react";
 import { memo, useEffect, useMemo, useRef } from "react";
 import { SharedConfiguration } from "../types";
-import { buildSharedConfiguration } from "../utils";
+import { buildSharedConfiguration, withJWTTokenQueryParameter } from "../utils";
 
 type BuiltConfiguration = ReturnType<typeof buildSharedConfiguration>;
 
@@ -28,14 +28,15 @@ function ReactPreviewFrame({ mode, configuration, className, onStatus }: ReactPr
   const frameRef = useRef<ReturnType<typeof gitbook.createFrame> | null>(null);
 
   const frameURL = useMemo(
-    () =>
-      gitbook.getFrameURL({
+    () => {
+      const url = gitbook.getFrameURL({
         visitor: {
-          token: configuration.visitor.token,
           unsignedClaims: configuration.visitor.user?.unsignedClaims,
         },
-      }),
-    [gitbook, configuration.visitor.token, configuration.visitor.user?.unsignedClaims],
+      });
+      return withJWTTokenQueryParameter(url, configuration.visitor.jwt_token);
+    },
+    [gitbook, configuration.visitor.jwt_token, configuration.visitor.user?.unsignedClaims],
   );
 
   useEffect(() => {

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ScriptOnlyConfiguration, SharedConfiguration } from "../types";
+import { resolveVisitorJWTToken } from "../utils";
 
 interface CodeSnippetsProps {
   siteURL: string;
@@ -19,6 +20,20 @@ let shikiHighlighterPromise: Promise<{
 
 function toJson(value: unknown) {
   return JSON.stringify(value, null, 2);
+}
+
+function normalizeSharedConfiguration(sharedConfiguration: SharedConfiguration) {
+  const visitor = {
+    ...sharedConfiguration.visitor,
+    jwt_token: resolveVisitorJWTToken(sharedConfiguration.visitor),
+  };
+
+  delete visitor.token;
+
+  return {
+    ...sharedConfiguration,
+    visitor,
+  };
 }
 
 async function getShikiHighlighter() {
@@ -119,6 +134,8 @@ export function buildReactSnippet(
   sharedConfiguration: SharedConfiguration,
   mode: "assistant" | "docs",
 ) {
+  const normalizedConfiguration = normalizeSharedConfiguration(sharedConfiguration);
+
   return `import { GitBookProvider, GitBookFrame } from "@gitbook/embed/react";
 
 export function Preview() {
@@ -126,7 +143,7 @@ export function Preview() {
     <GitBookProvider siteURL="${siteURL}">
       <GitBookFrame
         className="gitbook-embed"
-        configuration={${toJson(sharedConfiguration)}}
+        configuration={${toJson(normalizedConfiguration)}}
         mode="${mode}"
       />
     </GitBookProvider>
@@ -139,6 +156,7 @@ export function buildNpmSnippet(
   sharedConfiguration: SharedConfiguration,
   mode: "assistant" | "docs",
 ) {
+  const normalizedConfiguration = normalizeSharedConfiguration(sharedConfiguration);
   const modeNavigation =
     mode === "assistant"
       ? "frame.navigateToAssistant();"
@@ -146,19 +164,18 @@ export function buildNpmSnippet(
 
   return `import { createGitBook } from "@gitbook/embed";
 
-const config = ${toJson(sharedConfiguration)};
+const config = ${toJson(normalizedConfiguration)};
 const iframe = document.createElement("iframe");
 iframe.style.width = "100%";
 iframe.style.height = "100%";
 const client = createGitBook({ siteURL: "${siteURL}" });
-iframe.src = client.getFrameURL({
-  visitor: {
-    token: config.visitor.token,
-    unsignedClaims: config.visitor.unsignedClaimsJson
-      ? JSON.parse(config.visitor.unsignedClaimsJson)
-      : undefined
-  }
-});
+const jwtToken = (config.visitor.jwt_token || "").trim();
+const unsignedClaims = config.visitor.unsignedClaimsJson
+  ? JSON.parse(config.visitor.unsignedClaimsJson)
+  : undefined;
+const frameURL = new URL(client.getFrameURL({ visitor: { unsignedClaims } }));
+if (jwtToken) frameURL.searchParams.set("jwt_token", jwtToken);
+iframe.src = frameURL.toString();
 document.querySelector("#gitbook-target")?.append(iframe);
 
 const frame = client.createFrame(iframe);
@@ -178,25 +195,27 @@ export function buildScriptSnippet(
   scriptOnlyConfiguration: ScriptOnlyConfiguration,
   mode: "assistant" | "docs",
 ) {
+  const normalizedConfiguration = normalizeSharedConfiguration(sharedConfiguration);
   const normalizedSiteURL = siteURL.endsWith("/") ? siteURL.slice(0, -1) : siteURL;
   const unsignedClaimsJson = sharedConfiguration.visitor.unsignedClaimsJson?.trim();
   const unsignedClaimsExpression = unsignedClaimsJson
     ? `JSON.parse(${JSON.stringify(unsignedClaimsJson)})`
     : "undefined";
+  const jwtToken = resolveVisitorJWTToken(sharedConfiguration.visitor) || "";
 
   return `<script async src="${normalizedSiteURL}/~gitbook/embed/script.js"></script>
 <script>
-  const token = ${JSON.stringify(sharedConfiguration.visitor.token ?? "")}.trim();
+  const jwtToken = ${JSON.stringify(jwtToken)}.trim();
   const unsignedClaims = ${unsignedClaimsExpression};
   window.GitBook(
     "init",
     { siteURL: "${siteURL}" },
-    token || unsignedClaims
-      ? { visitor: { token: token || undefined, unsignedClaims } }
+    jwtToken || unsignedClaims
+      ? { visitor: { jwt_token: jwtToken || undefined, unsignedClaims } }
       : undefined
   );
   window.GitBook("configure", {
-    ...${toJson(sharedConfiguration)},
+    ...${toJson(normalizedConfiguration)},
     ...${toJson(scriptOnlyConfiguration)}
   });
   window.GitBook("show");

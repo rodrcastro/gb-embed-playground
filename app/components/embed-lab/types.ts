@@ -24,6 +24,8 @@ export interface ToolConfig {
 }
 
 export interface VisitorConfig {
+  jwt_token?: string;
+  // Backward compatibility for older persisted payloads.
   token?: string;
   uuid?: string;
   traitsJson?: string;

@@ -470,16 +470,17 @@ export function ConfigEditor({
           onToggle={toggleSection}
         >
           <label className="lab-field">
-            <span>token</span>
+            <span>jwt_token</span>
             <input
               className="lab-input"
-              value={sharedConfiguration.visitor.token || ""}
+              value={sharedConfiguration.visitor.jwt_token || sharedConfiguration.visitor.token || ""}
               onChange={(event) =>
                 onSharedConfigurationChange({
                   ...sharedConfiguration,
                   visitor: {
                     ...sharedConfiguration.visitor,
-                    token: event.target.value,
+                    jwt_token: event.target.value,
+                    token: undefined,
                   },
                 })
               }

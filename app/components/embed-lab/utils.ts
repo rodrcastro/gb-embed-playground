@@ -39,6 +39,42 @@ function parseToolInputSchema(tool: ToolConfig): Record<string, unknown> | undef
   };
 }
 
+function normalizeVisitorConfig(visitor: VisitorConfig | undefined): VisitorConfig {
+  if (!visitor) {
+    return {};
+  }
+
+  const jwtToken = typeof visitor.jwt_token === "string" ? visitor.jwt_token : visitor.token;
+  const normalized: VisitorConfig = {
+    ...visitor,
+    jwt_token: jwtToken,
+  };
+
+  delete normalized.token;
+  return normalized;
+}
+
+export function resolveVisitorJWTToken(visitor: VisitorConfig | undefined): string | undefined {
+  const token = typeof visitor?.jwt_token === "string" ? visitor.jwt_token : visitor?.token;
+  const trimmed = token?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+export function withJWTTokenQueryParameter(frameURL: string, jwtToken?: string): string {
+  if (!jwtToken) {
+    return frameURL;
+  }
+
+  try {
+    const url = new URL(frameURL);
+    url.searchParams.delete("token");
+    url.searchParams.set("jwt_token", jwtToken);
+    return url.toString();
+  } catch {
+    return frameURL;
+  }
+}
+
 export function buildActions(actions: ActionConfig[]) {
   return actions
     .filter((action) => action.label.trim().length > 0)
@@ -89,11 +125,12 @@ export function buildTools(tools: ToolConfig[]) {
 }
 
 export function buildVisitor(visitor: VisitorConfig) {
+  const jwtToken = resolveVisitorJWTToken(visitor);
   const traits = parseJsonObject(visitor.traitsJson);
   const unsignedClaims = parseJsonObject(visitor.unsignedClaimsJson);
 
   return {
-    token: visitor.token || undefined,
+    jwt_token: jwtToken,
     user: {
       uuid: visitor.uuid || undefined,
       traits,
@@ -199,7 +236,11 @@ export function parseConfigurationJson(input: string): {
     throw new Error("Configuration JSON must be an object.");
   }
 
-  const nextShared = (parsed.sharedConfiguration ?? parsed) as SharedConfiguration;
+  const nextSharedRaw = (parsed.sharedConfiguration ?? parsed) as SharedConfiguration;
+  const nextShared = {
+    ...nextSharedRaw,
+    visitor: normalizeVisitorConfig(nextSharedRaw.visitor),
+  } as SharedConfiguration;
   const nextScriptOnly = (parsed.scriptOnlyConfiguration ?? {
     button: parsed.button,
   }) as ScriptOnlyConfiguration;
@@ -253,7 +294,7 @@ export function sanitizeState(input: PlaygroundState): PlaygroundState {
         ? sharedConfiguration.suggestions
         : [],
       tools: Array.isArray(sharedConfiguration.tools) ? sharedConfiguration.tools : [],
-      visitor: sharedConfiguration.visitor || {},
+      visitor: normalizeVisitorConfig(sharedConfiguration.visitor),
     },
     scriptOnlyConfiguration: input.scriptOnlyConfiguration || {},
     ui: input.ui || {
