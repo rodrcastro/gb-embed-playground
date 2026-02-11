@@ -38,7 +38,7 @@ export const DEFAULT_PLAYGROUND_STATE: PlaygroundState = {
       authMode: "manual-jwt",
       uuid: "embed-lab-visitor",
       traitsJson: '{"plan":"free","team":"qa"}',
-      unsignedClaimsJson: '{"env":"staging"}',
+      unsignedClaimsJson: '',
     },
   },
   scriptOnlyConfiguration: {
