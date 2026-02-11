@@ -10,6 +10,7 @@ export const DEFAULT_PLAYGROUND_STATE: PlaygroundState = {
       {
         id: "a1",
         label: "Open docs home",
+        icon: "circle-question",
         variant: "navigateToPage",
         value: "/",
       },

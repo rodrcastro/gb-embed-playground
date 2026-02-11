@@ -10,6 +10,7 @@ export interface GreetingConfig {
 export interface ActionConfig {
   id: string;
   label: string;
+  icon?: string;
   variant: "navigateToAssistant" | "navigateToPage" | "openUrl";
   value?: string;
 }

@@ -31,10 +31,11 @@ type SectionId =
   | "json";
 
 function splitLines(value: string): string[] {
-  return value
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
+  if (!value.length) {
+    return [];
+  }
+
+  return value.split("\n");
 }
 
 function joinLines(value: string[]): string {
@@ -237,6 +238,21 @@ export function ConfigEditor({
         >
           {sharedConfiguration.actions.map((action, index) => (
             <div key={action.id} className="lab-inline-card">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="lab-status-meta">Action {index + 1}</span>
+                <button
+                  type="button"
+                  className="lab-button ghost"
+                  onClick={() => {
+                    onSharedConfigurationChange({
+                      ...sharedConfiguration,
+                      actions: sharedConfiguration.actions.filter((_, actionIndex) => actionIndex !== index),
+                    });
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
               <label className="lab-field">
                 <span>Label</span>
                 <input
@@ -245,6 +261,25 @@ export function ConfigEditor({
                   onChange={(event) => {
                     const nextActions = [...sharedConfiguration.actions];
                     nextActions[index] = { ...action, label: event.target.value };
+                    onSharedConfigurationChange({
+                      ...sharedConfiguration,
+                      actions: nextActions,
+                    });
+                  }}
+                />
+              </label>
+              <label className="lab-field">
+                <span>Icon (Font Awesome)</span>
+                <input
+                  className="lab-input"
+                  value={action.icon || ""}
+                  placeholder="circle-question"
+                  onChange={(event) => {
+                    const nextActions = [...sharedConfiguration.actions];
+                    nextActions[index] = {
+                      ...action,
+                      icon: event.target.value,
+                    };
                     onSharedConfigurationChange({
                       ...sharedConfiguration,
                       actions: nextActions,
@@ -305,6 +340,7 @@ export function ConfigEditor({
                   {
                     id: `a-${Date.now()}`,
                     label: "New action",
+                    icon: "circle-question",
                     variant: "navigateToPage",
                     value: "/",
                   },
@@ -325,6 +361,21 @@ export function ConfigEditor({
         >
           {sharedConfiguration.tools.map((tool, index) => (
             <div key={tool.id} className="lab-inline-card">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="lab-status-meta">Tool {index + 1}</span>
+                <button
+                  type="button"
+                  className="lab-button ghost"
+                  onClick={() => {
+                    onSharedConfigurationChange({
+                      ...sharedConfiguration,
+                      tools: sharedConfiguration.tools.filter((_, toolIndex) => toolIndex !== index),
+                    });
+                  }}
+                >
+                  Remove
+                </button>
+              </div>
               <label className="lab-field">
                 <span>Name</span>
                 <input

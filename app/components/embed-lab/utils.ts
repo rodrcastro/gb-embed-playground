@@ -44,9 +44,11 @@ export function buildActions(actions: ActionConfig[]) {
     .filter((action) => action.label.trim().length > 0)
     .map((action) => {
       const label = action.label.trim();
+      const icon = action.icon?.trim() || "circle-question";
       const value = action.value?.trim();
 
       return {
+        icon,
         label,
         onClick: (api: {
           navigateToAssistant?: () => void;
