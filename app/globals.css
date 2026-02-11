@@ -482,12 +482,43 @@ iframe.gitbook-embed-light-surface,
   gap: 0.65rem;
 }
 
+.lab-code-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.lab-code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
 .lab-code-title {
   font-size: 0.72rem;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.55);
-  margin-bottom: 0.3rem;
+  margin-bottom: 0;
+}
+
+.lab-copy-button {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.24rem 0.56rem;
+  cursor: pointer;
+}
+
+.lab-copy-button.is-copied {
+  background: rgba(16, 185, 129, 0.16);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #a7f3d0;
 }
 
 .lab-code-block {
@@ -501,6 +532,19 @@ iframe.gitbook-embed-light-surface,
   word-break: break-word;
   color: #e9e0ff;
   max-height: 220px;
+  overflow: auto;
+}
+
+.lab-code-block.shiki-host {
+  padding: 0;
+  background: transparent;
+}
+
+.lab-code-block.shiki-host pre {
+  margin: 0 !important;
+  border-radius: 12px;
+  padding: 0.75rem !important;
+  min-width: 100%;
   overflow: auto;
 }
 

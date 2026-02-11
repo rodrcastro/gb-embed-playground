@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { ScriptOnlyConfiguration, SharedConfiguration } from "../types";
 
 interface CodeSnippetsProps {
@@ -7,8 +10,108 @@ interface CodeSnippetsProps {
   scriptOnlyConfiguration: ScriptOnlyConfiguration;
 }
 
+type CodeLanguage = "tsx" | "ts" | "html";
+
+const SHIKI_URL = "https://esm.sh/shiki@1.29.2/bundle/web";
+let shikiHighlighterPromise: Promise<{
+  codeToHtml: (code: string, options: { lang: CodeLanguage; theme: string }) => string;
+}> | null = null;
+
 function toJson(value: unknown) {
   return JSON.stringify(value, null, 2);
+}
+
+async function getShikiHighlighter() {
+  if (!shikiHighlighterPromise) {
+    shikiHighlighterPromise = import(
+      /* webpackIgnore: true */
+      SHIKI_URL
+    ).then(async (mod) => {
+      const createHighlighter =
+        (mod as { createHighlighter?: (input: unknown) => Promise<unknown> }).createHighlighter;
+
+      if (typeof createHighlighter !== "function") {
+        throw new Error("Shiki createHighlighter was not found.");
+      }
+
+      const highlighter = (await createHighlighter({
+        themes: ["github-dark"],
+        langs: ["tsx", "ts", "html", "javascript"],
+      })) as {
+        codeToHtml: (code: string, options: { lang: CodeLanguage; theme: string }) => string;
+      };
+
+      return highlighter;
+    });
+  }
+
+  return shikiHighlighterPromise;
+}
+
+interface CodeSnippetBlockProps {
+  title: string;
+  language: CodeLanguage;
+  code: string;
+}
+
+function CodeSnippetBlock({ title, language, code }: CodeSnippetBlockProps) {
+  const [copied, setCopied] = useState(false);
+  const [highlightedHtml, setHighlightedHtml] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const highlight = async () => {
+      try {
+        const highlighter = await getShikiHighlighter();
+        if (cancelled) {
+          return;
+        }
+        setHighlightedHtml(highlighter.codeToHtml(code, { lang: language, theme: "github-dark" }));
+      } catch {
+        if (cancelled) {
+          return;
+        }
+        setHighlightedHtml(null);
+      }
+    };
+
+    highlight();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [code, language]);
+
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1200);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <div className="lab-code-card">
+      <div className="lab-code-header">
+        <p className="lab-code-title">{title}</p>
+        <button
+          type="button"
+          className={`lab-copy-button ${copied ? "is-copied" : ""}`}
+          onClick={onCopy}
+        >
+          {copied ? "Copied" : "Copy"}
+        </button>
+      </div>
+      {highlightedHtml ? (
+        <div className="lab-code-block shiki-host" dangerouslySetInnerHTML={{ __html: highlightedHtml }} />
+      ) : (
+        <pre className="lab-code-block">{code}</pre>
+      )}
+    </div>
+  );
 }
 
 export function buildReactSnippet(
@@ -112,22 +215,15 @@ export function CodeSnippets({
   sharedConfiguration,
   scriptOnlyConfiguration,
 }: CodeSnippetsProps) {
+  const reactSnippet = buildReactSnippet(siteURL, sharedConfiguration, mode);
+  const npmSnippet = buildNpmSnippet(siteURL, sharedConfiguration, mode);
+  const scriptSnippet = buildScriptSnippet(siteURL, sharedConfiguration, scriptOnlyConfiguration, mode);
+
   return (
     <div className="lab-code-stack">
-      <div>
-        <p className="lab-code-title">React</p>
-        <pre className="lab-code-block">{buildReactSnippet(siteURL, sharedConfiguration, mode)}</pre>
-      </div>
-      <div>
-        <p className="lab-code-title">NPM</p>
-        <pre className="lab-code-block">{buildNpmSnippet(siteURL, sharedConfiguration, mode)}</pre>
-      </div>
-      <div>
-        <p className="lab-code-title">Script</p>
-        <pre className="lab-code-block">
-          {buildScriptSnippet(siteURL, sharedConfiguration, scriptOnlyConfiguration, mode)}
-        </pre>
-      </div>
+      <CodeSnippetBlock title="React" language="tsx" code={reactSnippet} />
+      <CodeSnippetBlock title="NPM" language="ts" code={npmSnippet} />
+      <CodeSnippetBlock title="Script" language="html" code={scriptSnippet} />
     </div>
   );
 }
