@@ -501,6 +501,70 @@ iframe.gitbook-embed-light-surface,
   color: rgba(255, 255, 255, 0.62);
 }
 
+.lab-property-reference {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+}
+
+.lab-property-summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.58rem 0.72rem;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.84);
+}
+
+.lab-property-summary::-webkit-details-marker {
+  display: none;
+}
+
+.lab-property-grid {
+  padding: 0 0.72rem 0.72rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.48rem;
+}
+
+.lab-property-item {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(2, 2, 6, 0.36);
+  padding: 0.48rem;
+}
+
+.lab-property-name {
+  display: block;
+  margin-bottom: 0.38rem;
+  font-size: 0.75rem;
+  color: rgba(247, 244, 255, 0.94);
+  word-break: break-all;
+}
+
+.lab-property-value {
+  display: grid;
+  gap: 0.18rem;
+  margin-top: 0.34rem;
+}
+
+.lab-property-label {
+  font-size: 0.62rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.56);
+}
+
+.lab-property-value code {
+  font-size: 0.7rem;
+  color: #ebe4ff;
+  word-break: break-word;
+}
+
 .lab-code-stack {
   display: flex;
   flex-direction: column;

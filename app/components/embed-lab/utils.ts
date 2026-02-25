@@ -40,35 +40,136 @@ function parseToolInputSchema(tool: ToolConfig): Record<string, unknown> | undef
   };
 }
 
-export const EDITABLE_ROOT_CSS_PROPERTIES = [
-  "--gitbook-widget-background-solid",
-  "--gitbook-widget-background-solid-hover",
-  "--gitbook-widget-background-translucent",
-  "--gitbook-widget-background-translucent-hover",
-  "--gitbook-widget-border-color",
-  "--gitbook-widget-bottom",
-  "--gitbook-widget-button-height",
-  "--gitbook-widget-easing",
-  "--gitbook-widget-easing-bounce",
-  "--gitbook-widget-icon-size",
-  "--gitbook-widget-left",
-  "--gitbook-widget-radius",
-  "--gitbook-widget-right",
-  "--gitbook-widget-text-color",
-  "--gitbook-widget-text-size",
-  "--gitbook-widget-top",
-  "--gitbook-widget-transition-duration-fast",
-  "--gitbook-widget-transition-duration-slow",
-  "--gitbook-widget-window-bottom",
-  "--gitbook-widget-window-height",
-  "--gitbook-widget-window-spacing",
-  "--gitbook-widget-window-width",
-] as const;
-const ROOT_CSS_PROPERTY_PREFIX = "--gitbook-widget-";
+export interface EditableRootCssPropertyReference {
+  property: string;
+  suffix: string;
+  defaultValue: string;
+  darkModeDefault?: string;
+}
+
+export const EDITABLE_ROOT_CSS_REFERENCE: EditableRootCssPropertyReference[] = [
+  {
+    property: "--gitbook-widget-top",
+    suffix: "top",
+    defaultValue: "1rem",
+  },
+  {
+    property: "--gitbook-widget-bottom",
+    suffix: "bottom",
+    defaultValue: "1rem",
+  },
+  {
+    property: "--gitbook-widget-right",
+    suffix: "right",
+    defaultValue: "1rem",
+  },
+  {
+    property: "--gitbook-widget-left",
+    suffix: "left",
+    defaultValue: "1rem",
+  },
+  {
+    property: "--gitbook-widget-button-height",
+    suffix: "button-height",
+    defaultValue: "46px",
+  },
+  {
+    property: "--gitbook-widget-radius",
+    suffix: "radius",
+    defaultValue: ".5rem",
+  },
+  {
+    property: "--gitbook-widget-text-size",
+    suffix: "text-size",
+    defaultValue: "1rem",
+  },
+  {
+    property: "--gitbook-widget-text-color",
+    suffix: "text-color",
+    defaultValue: "#656973",
+    darkModeDefault: "#fff",
+  },
+  {
+    property: "--gitbook-widget-border-color",
+    suffix: "border-color",
+    defaultValue: "#e5e5e5",
+    darkModeDefault: "#202020",
+  },
+  {
+    property: "--gitbook-widget-background-translucent",
+    suffix: "background-translucent",
+    defaultValue: "#ffffffe6",
+    darkModeDefault: "#0f0f0fe6",
+  },
+  {
+    property: "--gitbook-widget-background-translucent-hover",
+    suffix: "background-translucent-hover",
+    defaultValue: "#fafafae6",
+    darkModeDefault: "#141414e6",
+  },
+  {
+    property: "--gitbook-widget-background-solid",
+    suffix: "background-solid",
+    defaultValue: "#fff",
+    darkModeDefault: "#f0f0f0",
+  },
+  {
+    property: "--gitbook-widget-background-solid-hover",
+    suffix: "background-solid-hover",
+    defaultValue: "#fbfbfb",
+  },
+  {
+    property: "--gitbook-widget-icon-size",
+    suffix: "icon-size",
+    defaultValue: "1.25rem",
+  },
+  {
+    property: "--gitbook-widget-window-width",
+    suffix: "window-width",
+    defaultValue: "28rem",
+  },
+  {
+    property: "--gitbook-widget-window-height",
+    suffix: "window-height",
+    defaultValue: "40rem",
+  },
+  {
+    property: "--gitbook-widget-window-spacing",
+    suffix: "window-spacing",
+    defaultValue: ".5rem",
+  },
+  {
+    property: "--gitbook-widget-window-bottom",
+    suffix: "window-bottom",
+    defaultValue:
+      "calc(var(--gitbook-widget-bottom) + var(--gitbook-widget-button-height) + var(--gitbook-widget-window-spacing))",
+  },
+  {
+    property: "--gitbook-widget-transition-duration-fast",
+    suffix: "transition-duration-fast",
+    defaultValue: ".2s",
+  },
+  {
+    property: "--gitbook-widget-transition-duration-slow",
+    suffix: "transition-duration-slow",
+    defaultValue: ".5s",
+  },
+  {
+    property: "--gitbook-widget-easing",
+    suffix: "easing",
+    defaultValue: "cubic-bezier(.25,1,.5,1)",
+  },
+  {
+    property: "--gitbook-widget-easing-bounce",
+    suffix: "easing-bounce",
+    defaultValue: "cubic-bezier(.34,1.56,.64,1)",
+  },
+];
+export const EDITABLE_ROOT_CSS_PROPERTIES = EDITABLE_ROOT_CSS_REFERENCE.map((item) => item.property);
 const ROOT_CSS_PROPERTY_LOOKUP = new Map<string, string>(
-  EDITABLE_ROOT_CSS_PROPERTIES.flatMap((property) => [
-    [property, property],
-    [property.replace(ROOT_CSS_PROPERTY_PREFIX, ""), property],
+  EDITABLE_ROOT_CSS_REFERENCE.flatMap((item) => [
+    [item.property, item.property],
+    [item.suffix, item.property],
   ]),
 );
 

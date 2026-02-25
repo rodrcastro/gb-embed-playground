@@ -6,7 +6,7 @@ import {
   SharedConfiguration,
   ValidationResult,
 } from "../types";
-import { EDITABLE_ROOT_CSS_PROPERTIES } from "../utils";
+import { EDITABLE_ROOT_CSS_REFERENCE } from "../utils";
 import { MonacoJsonEditor } from "./MonacoJsonEditor";
 
 interface ConfigEditorProps {
@@ -715,14 +715,29 @@ export function ConfigEditor({
             <span className="lab-status-inline">Inactive in this mode.</span>
           )}
 
-          <div className="lab-inline-card mt-3">
-            <p className="lab-status-meta mb-2">Available properties</p>
-            <div className="grid gap-1">
-              {EDITABLE_ROOT_CSS_PROPERTIES.map((property) => (
-                <code key={property}>{property.replace("--gitbook-widget-", "")}</code>
+          <details className="lab-property-reference mt-3">
+            <summary className="lab-property-summary">
+              <span>Available properties and defaults</span>
+              <span className="lab-accordion-badge">{EDITABLE_ROOT_CSS_REFERENCE.length}</span>
+            </summary>
+            <div className="lab-property-grid">
+              {EDITABLE_ROOT_CSS_REFERENCE.map((item) => (
+                <article key={item.property} className="lab-property-item">
+                  <code className="lab-property-name">{item.suffix}</code>
+                  <div className="lab-property-value">
+                    <span className="lab-property-label">Default</span>
+                    <code>{item.defaultValue}</code>
+                  </div>
+                  {item.darkModeDefault ? (
+                    <div className="lab-property-value">
+                      <span className="lab-property-label">Dark mode</span>
+                      <code>{item.darkModeDefault}</code>
+                    </div>
+                  ) : null}
+                </article>
               ))}
             </div>
-          </div>
+          </details>
         </AccordionSection>
       </div>
     </div>
