@@ -501,16 +501,26 @@ iframe.gitbook-embed-light-surface,
   color: rgba(255, 255, 255, 0.62);
 }
 
-.lab-property-reference {
+.lab-css-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 280px);
+  gap: 0.7rem;
+  align-items: start;
+}
+
+.lab-css-editor-stack {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.lab-css-sidebar {
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.03);
   overflow: hidden;
 }
 
-.lab-property-summary {
-  list-style: none;
-  cursor: pointer;
+.lab-css-sidebar-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -518,17 +528,19 @@ iframe.gitbook-embed-light-surface,
   padding: 0.58rem 0.72rem;
   font-size: 0.78rem;
   color: rgba(255, 255, 255, 0.84);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.lab-property-summary::-webkit-details-marker {
-  display: none;
+.lab-css-sidebar-scroll {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 0.56rem;
 }
 
 .lab-property-grid {
-  padding: 0 0.72rem 0.72rem;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 0.48rem;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.42rem;
 }
 
 .lab-property-item {
@@ -563,6 +575,16 @@ iframe.gitbook-embed-light-surface,
   font-size: 0.7rem;
   color: #ebe4ff;
   word-break: break-word;
+}
+
+@media (max-width: 980px) {
+  .lab-css-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .lab-css-sidebar-scroll {
+    max-height: 220px;
+  }
 }
 
 .lab-code-stack {

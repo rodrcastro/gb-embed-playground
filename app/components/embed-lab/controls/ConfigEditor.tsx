@@ -682,62 +682,68 @@ export function ConfigEditor({
           badge={implementation === "script" ? "active" : "inactive"}
           disabled={implementation !== "script"}
         >
-          {implementation !== "script" ? (
-            <p className="lab-muted-note">
-              CSS overrides are available only in Script implementation.
-            </p>
-          ) : (
-            <p className="lab-muted-note">
-              Add one declaration per line using the properties listed below. The
-              <code>--gitbook-widget-</code> prefix is added automatically.
-            </p>
-          )}
-          <label className="lab-field">
-            <span>Declarations</span>
-            <textarea
-              className="lab-textarea"
-              rows={8}
-              value={rootCssOverrides}
-              disabled={implementation !== "script"}
-              onChange={(event) => onRootCssOverridesChange(event.target.value)}
-              placeholder={
-                "background-solid: #111111;\ntext-color: #f9f9f9;"
-              }
-            />
-          </label>
-          {implementation === "script" ? (
-            <span className={`lab-status-inline ${rootCssValidation.valid ? "ok" : "error"}`}>
-              {rootCssValidation.valid
-                ? "CSS overrides valid"
-                : rootCssValidation.message || "Invalid CSS overrides"}
-            </span>
-          ) : (
-            <span className="lab-status-inline">Inactive in this mode.</span>
-          )}
-
-          <details className="lab-property-reference mt-3">
-            <summary className="lab-property-summary">
-              <span>Available properties and defaults</span>
-              <span className="lab-accordion-badge">{EDITABLE_ROOT_CSS_REFERENCE.length}</span>
-            </summary>
-            <div className="lab-property-grid">
-              {EDITABLE_ROOT_CSS_REFERENCE.map((item) => (
-                <article key={item.property} className="lab-property-item">
-                  <code className="lab-property-name">{item.suffix}</code>
-                  <div className="lab-property-value">
-                    <span className="lab-property-label">Default</span>
-                    <code>{item.defaultValue}</code>
-                  </div>
-                  {item.darkModeDefault ? (
-                    <div className="lab-property-value">
-                      <span className="lab-property-label">Dark mode</span>
-                      <code>{item.darkModeDefault}</code>
-                    </div>
-                  ) : null}
-                </article>
-              ))}
+          <div className="lab-css-layout">
+            <div className="lab-css-editor-stack">
+              {implementation !== "script" ? (
+                <p className="lab-muted-note">
+                  CSS overrides are available only in Script implementation.
+                </p>
+              ) : (
+                <p className="lab-muted-note">
+                  Add one declaration per line using the properties listed in the sidebar. The
+                  <code>--gitbook-widget-</code> prefix is added automatically.
+                </p>
+              )}
+              <label className="lab-field">
+                <span>Declarations</span>
+                <textarea
+                  className="lab-textarea"
+                  rows={8}
+                  value={rootCssOverrides}
+                  disabled={implementation !== "script"}
+                  onChange={(event) => onRootCssOverridesChange(event.target.value)}
+                  placeholder={
+                    "background-solid: #111111;\ntext-color: #f9f9f9;"
+                  }
+                />
+              </label>
+              {implementation === "script" ? (
+                <span className={`lab-status-inline ${rootCssValidation.valid ? "ok" : "error"}`}>
+                  {rootCssValidation.valid
+                    ? "CSS overrides valid"
+                    : rootCssValidation.message || "Invalid CSS overrides"}
+                </span>
+              ) : (
+                <span className="lab-status-inline">Inactive in this mode.</span>
+              )}
             </div>
-          </details>
+
+            <aside className="lab-css-sidebar">
+              <div className="lab-css-sidebar-header">
+                <span>Available properties</span>
+                <span className="lab-accordion-badge">{EDITABLE_ROOT_CSS_REFERENCE.length}</span>
+              </div>
+              <div className="lab-css-sidebar-scroll">
+                <div className="lab-property-grid">
+                  {EDITABLE_ROOT_CSS_REFERENCE.map((item) => (
+                    <article key={item.property} className="lab-property-item">
+                      <code className="lab-property-name">{item.suffix}</code>
+                      <div className="lab-property-value">
+                        <span className="lab-property-label">Default</span>
+                        <code>{item.defaultValue}</code>
+                      </div>
+                      {item.darkModeDefault ? (
+                        <div className="lab-property-value">
+                          <span className="lab-property-label">Dark mode</span>
+                          <code>{item.darkModeDefault}</code>
+                        </div>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              </div>
+            </aside>
+          </div>
         </AccordionSection>
       </div>
     </div>
