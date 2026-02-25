@@ -181,10 +181,14 @@ document.querySelector("#gitbook-target")?.append(iframe);
 const frame = client.createFrame(iframe);
 frame.configure({
   tabs: config.tabs,
+  closeButton: config.closeButton,
   actions: config.actions,
   greeting: config.greeting,
   suggestions: config.suggestions,
   tools: config.tools
+});
+const unsubscribe = frame.on("close", () => {
+  iframe.style.display = "none";
 });
 ${modeNavigation}`;
 }

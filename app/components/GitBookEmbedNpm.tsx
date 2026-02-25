@@ -25,8 +25,14 @@ export default function GitBookEmbedNpm() {
     iframe.style.height = "100%";
 
     mountNode.appendChild(iframe);
+    const frame = gitbook.createFrame(iframe);
+    frame.configure({ closeButton: true } as never);
+    const unsubscribe = frame.on("close", () => {
+      iframe.style.display = "none";
+    });
 
     return () => {
+      unsubscribe();
       iframe.remove();
     };
   }, []);

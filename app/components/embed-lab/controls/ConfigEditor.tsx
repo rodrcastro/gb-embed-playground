@@ -178,6 +178,22 @@ export function ConfigEditor({
               </label>
             </div>
           </div>
+          <div className="lab-field">
+            <span>closeButton</span>
+            <label className="lab-check-row">
+              <input
+                type="checkbox"
+                checked={sharedConfiguration.closeButton}
+                onChange={(event) =>
+                  onSharedConfigurationChange({
+                    ...sharedConfiguration,
+                    closeButton: event.target.checked,
+                  })
+                }
+              />
+              Show close button
+            </label>
+          </div>
         </AccordionSection>
 
         <AccordionSection

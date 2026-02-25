@@ -61,8 +61,13 @@ function ReactPreviewFrame({
       return;
     }
 
-    frame.configure({
+    if (iframeRef.current) {
+      iframeRef.current.style.removeProperty("display");
+    }
+
+    const settings = {
       tabs: configuration.tabs,
+      closeButton: configuration.closeButton,
       actions: configuration.actions as never,
       greeting: {
         title: configuration.greeting?.title ?? "",
@@ -70,7 +75,9 @@ function ReactPreviewFrame({
       },
       suggestions: configuration.suggestions,
       tools: configuration.tools as never,
-    });
+    };
+
+    frame.configure(settings as never);
 
     if (mode === "assistant") {
       frame.navigateToAssistant();
@@ -80,6 +87,20 @@ function ReactPreviewFrame({
 
     onStatus?.("React embed applied.", "success");
   }, [mode, configuration, onStatus]);
+
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame?.on) {
+      return;
+    }
+
+    return frame.on("close", () => {
+      if (iframeRef.current) {
+        iframeRef.current.style.display = "none";
+      }
+      onStatus?.("React embed close event received. Frame hidden.", "info");
+    });
+  }, [onStatus, frameURL]);
 
   return <iframe ref={iframeRef} title="GitBook" src={frameURL} width="100%" height="100%" className={className} />;
 }

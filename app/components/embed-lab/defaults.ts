@@ -6,6 +6,7 @@ export const DEFAULT_PLAYGROUND_STATE: PlaygroundState = {
   mode: "assistant",
   sharedConfiguration: {
     tabs: ["assistant", "docs"],
+    closeButton: true,
     actions: [
       {
         id: "a1",

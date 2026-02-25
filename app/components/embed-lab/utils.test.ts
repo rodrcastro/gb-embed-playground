@@ -42,6 +42,7 @@ describe("embed utils", () => {
       mode: "assistant",
       sharedConfiguration: {
         tabs: ["assistant", "docs"],
+        closeButton: false,
         actions: [],
         greeting: {},
         suggestions: [],

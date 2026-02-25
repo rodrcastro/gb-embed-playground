@@ -36,6 +36,7 @@ export interface VisitorConfig {
 
 export interface SharedConfiguration {
   tabs: Array<"assistant" | "docs">;
+  closeButton: boolean;
   actions: ActionConfig[];
   greeting: GreetingConfig;
   suggestions: string[];

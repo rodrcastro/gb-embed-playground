@@ -151,6 +151,7 @@ export function buildVisitor(visitor: VisitorConfig) {
 export function buildSharedConfiguration(sharedConfiguration: SharedConfiguration) {
   return {
     tabs: sharedConfiguration.tabs,
+    closeButton: sharedConfiguration.closeButton,
     actions: buildActions(sharedConfiguration.actions),
     greeting: sharedConfiguration.greeting,
     suggestions: sharedConfiguration.suggestions.filter((value) => value.trim().length > 0),
@@ -179,6 +180,10 @@ export function validateConfiguration(
 
   if (!Array.isArray(sharedConfiguration.suggestions)) {
     return { valid: false, message: "suggestions must be an array." };
+  }
+
+  if (typeof sharedConfiguration.closeButton !== "boolean") {
+    return { valid: false, message: "closeButton must be a boolean." };
   }
 
   for (const tool of sharedConfiguration.tools) {
@@ -248,6 +253,7 @@ export function parseConfigurationJson(input: string): {
   const nextSharedRaw = (parsed.sharedConfiguration ?? parsed) as SharedConfiguration;
   const nextShared = {
     ...nextSharedRaw,
+    closeButton: typeof nextSharedRaw.closeButton === "boolean" ? nextSharedRaw.closeButton : false,
     visitor: normalizeVisitorConfig(nextSharedRaw.visitor),
   } as SharedConfiguration;
   const nextScriptOnly = (parsed.scriptOnlyConfiguration ?? {
@@ -277,6 +283,7 @@ export function formatConfigurationJson(
 export function sanitizeState(input: PlaygroundState): PlaygroundState {
   const sharedConfiguration = input.sharedConfiguration || {
     tabs: ["assistant", "docs"],
+    closeButton: false,
     actions: [],
     greeting: {},
     suggestions: [],
@@ -296,6 +303,7 @@ export function sanitizeState(input: PlaygroundState): PlaygroundState {
       tabs: Array.isArray(sharedConfiguration.tabs)
         ? sharedConfiguration.tabs.filter((tab) => tab === "assistant" || tab === "docs")
         : ["assistant", "docs"],
+      closeButton: typeof sharedConfiguration.closeButton === "boolean" ? sharedConfiguration.closeButton : false,
       actions: Array.isArray(sharedConfiguration.actions)
         ? sharedConfiguration.actions
         : [],

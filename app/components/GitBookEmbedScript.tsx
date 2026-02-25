@@ -19,6 +19,7 @@ export default function GitBookEmbedScript() {
       }
 
       window.GitBook("init", { siteURL: SITE_URL });
+      window.GitBook("configure", { closeButton: true });
       window.GitBook("show");
     };
 
