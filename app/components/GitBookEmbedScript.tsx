@@ -13,6 +13,23 @@ function resolveSiteScriptURL(siteURL: string): string {
   return url.toString();
 }
 
+function hideGitBookScriptFrameNodes() {
+  const floatingEmbedNodes = Array.from(document.querySelectorAll<HTMLElement>("body *")).filter((node) => {
+    if (!node.querySelector('iframe[src*="/~gitbook/embed"]')) {
+      return false;
+    }
+
+    const style = window.getComputedStyle(node);
+    return style.position === "fixed";
+  });
+
+  floatingEmbedNodes.forEach((node) => {
+    node.style.setProperty("display", "none", "important");
+    node.style.setProperty("visibility", "hidden", "important");
+    node.style.setProperty("pointer-events", "none", "important");
+  });
+}
+
 export default function GitBookEmbedScript() {
   useEffect(() => {
     let isDisposed = false;
@@ -46,6 +63,8 @@ export default function GitBookEmbedScript() {
 
       window.GitBook("close");
       window.GitBook("hide");
+      window.GitBook("unload");
+      hideGitBookScriptFrameNodes();
     };
 
     const loadScript = (src: string) =>

@@ -70,6 +70,27 @@ export function cleanupGitBookScriptWidget() {
   floatingEmbedNodes.forEach((node) => node.remove());
 }
 
+function hideGitBookScriptFrameNodes() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  const floatingEmbedNodes = Array.from(document.querySelectorAll<HTMLElement>("body *")).filter((node) => {
+    if (!node.querySelector('iframe[src*="/~gitbook/embed"]')) {
+      return false;
+    }
+
+    const style = window.getComputedStyle(node);
+    return style.position === "fixed";
+  });
+
+  floatingEmbedNodes.forEach((node) => {
+    node.style.setProperty("display", "none", "important");
+    node.style.setProperty("visibility", "hidden", "important");
+    node.style.setProperty("pointer-events", "none", "important");
+  });
+}
+
 function resolveSiteScriptURL(siteURL: string): string | undefined {
   try {
     const url = new URL(siteURL);
@@ -162,6 +183,8 @@ export function ScriptPreview({
 
       window.GitBook("close");
       window.GitBook("hide");
+      window.GitBook("unload");
+      hideGitBookScriptFrameNodes();
       onStatus("Script embed close event received. Widget hidden.", "info");
     };
 
