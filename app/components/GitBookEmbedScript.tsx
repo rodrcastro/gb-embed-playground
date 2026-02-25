@@ -18,6 +18,7 @@ export default function GitBookEmbedScript() {
     let isDisposed = false;
     const scriptSources = [resolveSiteScriptURL(SITE_URL), CDN_SCRIPT_SRC];
     let scriptElement: HTMLScriptElement | null = null;
+    const siteOrigin = new URL(SITE_URL).origin;
 
     const initWidget = () => {
       if (isDisposed || !window.GitBook) {
@@ -27,6 +28,24 @@ export default function GitBookEmbedScript() {
       window.GitBook("init", { siteURL: SITE_URL });
       window.GitBook("configure", { closeButton: true });
       window.GitBook("show");
+    };
+
+    const onFrameMessage = (event: MessageEvent) => {
+      if (event.origin !== siteOrigin) {
+        return;
+      }
+
+      if (typeof event.data !== "object" || event.data === null) {
+        return;
+      }
+
+      const message = event.data as { type?: string };
+      if (message.type !== "close" || !window.GitBook) {
+        return;
+      }
+
+      window.GitBook("close");
+      window.GitBook("hide");
     };
 
     const loadScript = (src: string) =>
@@ -59,10 +78,12 @@ export default function GitBookEmbedScript() {
       }
     };
 
+    window.addEventListener("message", onFrameMessage);
     void boot();
 
     return () => {
       isDisposed = true;
+      window.removeEventListener("message", onFrameMessage);
 
       if (scriptElement) {
         scriptElement.removeEventListener("load", initWidget);

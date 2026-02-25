@@ -98,6 +98,13 @@ export function ScriptPreview({
   useEffect(() => {
     let cancelled = false;
     const scriptURLs = [resolveSiteScriptURL(siteURL), GITBOOK_SCRIPT_URL].filter(Boolean) as string[];
+    const siteOrigin = (() => {
+      try {
+        return new URL(siteURL).origin;
+      } catch {
+        return undefined;
+      }
+    })();
     const jwtToken = effectiveJWTToken;
     const unsignedClaims = configuration.visitor?.user?.unsignedClaims;
     const visitorOptions =
@@ -137,6 +144,25 @@ export function ScriptPreview({
       }
 
       onStatus("Script embed reloaded.", "success");
+    };
+
+    const onFrameMessage = (event: MessageEvent) => {
+      if (siteOrigin && event.origin !== siteOrigin) {
+        return;
+      }
+
+      if (typeof event.data !== "object" || event.data === null) {
+        return;
+      }
+
+      const message = event.data as { type?: string };
+      if (message.type !== "close" || typeof window.GitBook !== "function") {
+        return;
+      }
+
+      window.GitBook("close");
+      window.GitBook("hide");
+      onStatus("Script embed close event received. Widget hidden.", "info");
     };
 
     const loadScript = (src: string): Promise<void> =>
@@ -194,10 +220,12 @@ export function ScriptPreview({
       }
     };
 
+    window.addEventListener("message", onFrameMessage);
     void boot();
 
     return () => {
       cancelled = true;
+      window.removeEventListener("message", onFrameMessage);
       cleanupGitBookScriptWidget();
     };
   }, [siteURL, mode, configuration, onStatus, effectiveJWTToken]);
