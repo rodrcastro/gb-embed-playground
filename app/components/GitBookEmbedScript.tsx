@@ -3,15 +3,21 @@
 import { useEffect } from "react";
 
 const SITE_URL = "https://stage.docs.rodrcastro.dev";
-const SCRIPT_SRC = "https://cdn.jsdelivr.net/npm/@gitbook/embed@0.2.2/dist/script.js";
+const CDN_SCRIPT_SRC = "https://cdn.jsdelivr.net/npm/@gitbook/embed@0.2.2/dist/script.js";
+
+function resolveSiteScriptURL(siteURL: string): string {
+  const url = new URL(siteURL);
+  url.pathname = `${url.pathname.endsWith("/") ? url.pathname : `${url.pathname}/`}~gitbook/embed/script.js`;
+  url.search = "";
+  url.hash = "";
+  return url.toString();
+}
 
 export default function GitBookEmbedScript() {
   useEffect(() => {
     let isDisposed = false;
-    let ownsScript = false;
-    let scriptElement = document.querySelector<HTMLScriptElement>(
-      `script[src="${SCRIPT_SRC}"]`,
-    );
+    const scriptSources = [resolveSiteScriptURL(SITE_URL), CDN_SCRIPT_SRC];
+    let scriptElement: HTMLScriptElement | null = null;
 
     const initWidget = () => {
       if (isDisposed || !window.GitBook) {
@@ -23,18 +29,37 @@ export default function GitBookEmbedScript() {
       window.GitBook("show");
     };
 
-    if (window.GitBook) {
-      initWidget();
-    } else if (scriptElement) {
-      scriptElement.addEventListener("load", initWidget, { once: true });
-    } else {
-      scriptElement = document.createElement("script");
-      scriptElement.src = SCRIPT_SRC;
-      scriptElement.async = true;
-      scriptElement.addEventListener("load", initWidget, { once: true });
-      document.body.appendChild(scriptElement);
-      ownsScript = true;
-    }
+    const loadScript = (src: string) =>
+      new Promise<void>((resolve, reject) => {
+        scriptElement?.remove();
+        scriptElement = document.createElement("script");
+        scriptElement.src = src;
+        scriptElement.async = true;
+        scriptElement.addEventListener("load", () => resolve(), { once: true });
+        scriptElement.addEventListener("error", () => reject(new Error(`Failed to load ${src}`)), { once: true });
+        document.body.appendChild(scriptElement);
+      });
+
+    const boot = async () => {
+      if (window.GitBook) {
+        initWidget();
+        return;
+      }
+
+      for (const src of scriptSources) {
+        try {
+          await loadScript(src);
+          if (window.GitBook) {
+            initWidget();
+            return;
+          }
+        } catch (error) {
+          console.error(error);
+        }
+      }
+    };
+
+    void boot();
 
     return () => {
       isDisposed = true;
@@ -49,7 +74,7 @@ export default function GitBookEmbedScript() {
         window.GitBook("unload");
       }
 
-      if (ownsScript && scriptElement?.parentNode) {
+      if (scriptElement?.parentNode) {
         scriptElement.parentNode.removeChild(scriptElement);
       }
     };

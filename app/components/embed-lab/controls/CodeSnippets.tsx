@@ -201,35 +201,75 @@ export function buildScriptSnippet(
   mode: "assistant" | "docs",
 ) {
   const normalizedConfiguration = normalizeSharedConfiguration(sharedConfiguration);
+  const siteScriptURL = (() => {
+    try {
+      const url = new URL(siteURL);
+      url.pathname = `${url.pathname.endsWith("/") ? url.pathname : `${url.pathname}/`}~gitbook/embed/script.js`;
+      url.search = "";
+      url.hash = "";
+      return url.toString();
+    } catch {
+      return "";
+    }
+  })();
   const unsignedClaimsJson = sharedConfiguration.visitor.unsignedClaimsJson?.trim();
   const unsignedClaimsExpression = unsignedClaimsJson
     ? `JSON.parse(${JSON.stringify(unsignedClaimsJson)})`
     : "undefined";
   const jwtToken = resolveVisitorJWTToken(sharedConfiguration.visitor) || "";
 
-  return `<script async src="${GITBOOK_SCRIPT_URL}"></script>
-<script>
-  const jwtToken = ${JSON.stringify(jwtToken)}.trim();
-  const unsignedClaims = ${unsignedClaimsExpression};
-  window.GitBook(
-    "init",
-    { siteURL: "${siteURL}" },
-    jwtToken || unsignedClaims
-      ? { visitor: { jwt_token: jwtToken || undefined, unsignedClaims } }
-      : undefined
-  );
-  window.GitBook("configure", {
-    ...${toJson(normalizedConfiguration)},
-    ...${toJson(scriptOnlyConfiguration)}
-  });
-  window.GitBook("show");
-  window.GitBook("open");
-  ${
-    mode === "assistant"
-      ? 'window.GitBook("navigateToAssistant");'
-      : 'window.GitBook("navigateToPage", "/");'
-  }
-</script>`;
+  return `<script>
+  const loadScript = (src) =>
+    new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.async = true;
+      script.src = src;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error("Failed to load " + src));
+      document.head.appendChild(script);
+    });
+
+  const bootstrapGitBook = async () => {
+    const scriptSources = [${JSON.stringify(siteScriptURL)}, ${JSON.stringify(GITBOOK_SCRIPT_URL)}].filter(Boolean);
+    for (const src of scriptSources) {
+      try {
+        await loadScript(src);
+        if (window.GitBook) break;
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    if (!window.GitBook) {
+      console.error("GitBook script failed to load from all sources.");
+      return;
+    }
+
+    const jwtToken = ${JSON.stringify(jwtToken)}.trim();
+    const unsignedClaims = ${unsignedClaimsExpression};
+    window.GitBook(
+      "init",
+      { siteURL: "${siteURL}" },
+      jwtToken || unsignedClaims
+        ? { visitor: { jwt_token: jwtToken || undefined, unsignedClaims } }
+        : undefined
+    );
+    window.GitBook("configure", {
+      ...${toJson(normalizedConfiguration)},
+      ...${toJson(scriptOnlyConfiguration)}
+    });
+    window.GitBook("show");
+    window.GitBook("open");
+    ${
+      mode === "assistant"
+        ? 'window.GitBook("navigateToAssistant");'
+        : 'window.GitBook("navigateToPage", "/");'
+    }
+  };
+
+  bootstrapGitBook();
+</script>
+`;
 }
 
 export function CodeSnippets({

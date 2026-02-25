@@ -28,7 +28,7 @@ describe("CodeSnippets", () => {
     expect(snippet).toContain("closeButton: config.closeButton");
   });
 
-  it("uses CDN script URL and includes closeButton in script snippet", () => {
+  it("uses fallback script sources and includes closeButton in script snippet", () => {
     const scriptOnlyConfiguration: ScriptOnlyConfiguration = {
       button: {
         icon: "sparkles",
@@ -42,7 +42,8 @@ describe("CodeSnippets", () => {
       "assistant",
     );
 
-    expect(snippet).toContain(`<script async src=\"${GITBOOK_SCRIPT_URL}\"></script>`);
+    expect(snippet).toContain(GITBOOK_SCRIPT_URL);
+    expect(snippet).toContain("~gitbook/embed/script.js");
     expect(snippet).toContain('"closeButton": true');
   });
 });

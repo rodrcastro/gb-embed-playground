@@ -70,6 +70,18 @@ export function cleanupGitBookScriptWidget() {
   floatingEmbedNodes.forEach((node) => node.remove());
 }
 
+function resolveSiteScriptURL(siteURL: string): string | undefined {
+  try {
+    const url = new URL(siteURL);
+    url.pathname = `${url.pathname.endsWith("/") ? url.pathname : `${url.pathname}/`}~gitbook/embed/script.js`;
+    url.search = "";
+    url.hash = "";
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+}
+
 export function ScriptPreview({
   siteURL,
   mode,
@@ -85,7 +97,7 @@ export function ScriptPreview({
 
   useEffect(() => {
     let cancelled = false;
-    const scriptURL = GITBOOK_SCRIPT_URL;
+    const scriptURLs = [resolveSiteScriptURL(siteURL), GITBOOK_SCRIPT_URL].filter(Boolean) as string[];
     const jwtToken = effectiveJWTToken;
     const unsignedClaims = configuration.visitor?.user?.unsignedClaims;
     const visitorOptions =
@@ -127,41 +139,62 @@ export function ScriptPreview({
       onStatus("Script embed reloaded.", "success");
     };
 
-    const existingScript = document.getElementById("gitbook-embed-script") as HTMLScriptElement | null;
-    if (existingScript && existingScript.src === scriptURL) {
+    const loadScript = (src: string): Promise<void> =>
+      new Promise((resolve, reject) => {
+        const existingScript = document.getElementById("gitbook-embed-script");
+        existingScript?.remove();
+
+        const script = document.createElement("script");
+        script.id = "gitbook-embed-script";
+        script.async = true;
+        script.src = src;
+
+        const timeout = window.setTimeout(() => {
+          script.remove();
+          reject(new Error(`timeout: ${src}`));
+        }, 10000);
+
+        script.onload = () => {
+          window.clearTimeout(timeout);
+          resolve();
+        };
+        script.onerror = () => {
+          window.clearTimeout(timeout);
+          script.remove();
+          reject(new Error(`error: ${src}`));
+        };
+
+        document.head.appendChild(script);
+      });
+
+    const boot = async () => {
       if (typeof window.GitBook === "function") {
         run();
-      } else {
-        existingScript.addEventListener("load", run, { once: true });
-      }
-      return () => {
-        cancelled = true;
-        existingScript.removeEventListener("load", run);
-      };
-    }
-
-    if (existingScript) {
-      existingScript.remove();
-    }
-
-    const script = document.createElement("script");
-    script.id = "gitbook-embed-script";
-    script.async = true;
-    script.src = scriptURL;
-    script.onload = () => {
-      if (cancelled) {
         return;
       }
-      run();
-    };
-    script.onerror = () => {
-      if (cancelled) {
-        return;
+
+      for (const src of scriptURLs) {
+        try {
+          await loadScript(src);
+          if (cancelled) {
+            return;
+          }
+
+          if (typeof window.GitBook === "function") {
+            run();
+            return;
+          }
+        } catch (error) {
+          console.error("GitBook script load failed", error);
+        }
       }
-      onStatus("Script embed failed to load.", "error");
+
+      if (!cancelled) {
+        onStatus("Script embed failed to load from siteURL and CDN script sources.", "error");
+      }
     };
 
-    document.head.appendChild(script);
+    void boot();
 
     return () => {
       cancelled = true;
