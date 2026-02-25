@@ -683,40 +683,38 @@ export function ConfigEditor({
           disabled={implementation !== "script"}
         >
           <div className="lab-css-layout">
-            <div className="lab-css-editor-stack">
-              {implementation !== "script" ? (
-                <p className="lab-muted-note">
-                  CSS overrides are available only in Script implementation.
-                </p>
-              ) : (
-                <p className="lab-muted-note">
-                  Add one declaration per line using the properties listed in the sidebar. The
-                  <code>--gitbook-widget-</code> prefix is added automatically.
-                </p>
-              )}
-              <label className="lab-field">
-                <span>Declarations</span>
-                <textarea
-                  className="lab-textarea"
-                  rows={8}
-                  value={rootCssOverrides}
-                  disabled={implementation !== "script"}
-                  onChange={(event) => onRootCssOverridesChange(event.target.value)}
-                  placeholder={
-                    "background-solid: #111111;\ntext-color: #f9f9f9;"
-                  }
-                />
-              </label>
-              {implementation === "script" ? (
-                <span className={`lab-status-inline ${rootCssValidation.valid ? "ok" : "error"}`}>
-                  {rootCssValidation.valid
-                    ? "CSS overrides valid"
-                    : rootCssValidation.message || "Invalid CSS overrides"}
-                </span>
-              ) : (
-                <span className="lab-status-inline">Inactive in this mode.</span>
-              )}
-            </div>
+            {implementation !== "script" ? (
+              <p className="lab-muted-note">
+                CSS overrides are available only in Script implementation.
+              </p>
+            ) : (
+              <p className="lab-muted-note">
+                Add one declaration per line using the properties listed below. The
+                <code>--gitbook-widget-</code> prefix is added automatically.
+              </p>
+            )}
+            <label className="lab-field">
+              <span>Declarations</span>
+              <textarea
+                className="lab-textarea"
+                rows={8}
+                value={rootCssOverrides}
+                disabled={implementation !== "script"}
+                onChange={(event) => onRootCssOverridesChange(event.target.value)}
+                placeholder={
+                  "background-solid: #111111;\ntext-color: #f9f9f9;"
+                }
+              />
+            </label>
+            {implementation === "script" ? (
+              <span className={`lab-status-inline ${rootCssValidation.valid ? "ok" : "error"}`}>
+                {rootCssValidation.valid
+                  ? "CSS overrides valid"
+                  : rootCssValidation.message || "Invalid CSS overrides"}
+              </span>
+            ) : (
+              <span className="lab-status-inline">Inactive in this mode.</span>
+            )}
 
             <aside className="lab-css-sidebar">
               <div className="lab-css-sidebar-header">

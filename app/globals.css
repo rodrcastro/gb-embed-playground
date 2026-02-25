@@ -502,14 +502,8 @@ iframe.gitbook-embed-light-surface,
 }
 
 .lab-css-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 280px);
-  gap: 0.7rem;
-  align-items: start;
-}
-
-.lab-css-editor-stack {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.55rem;
 }
 
@@ -532,14 +526,14 @@ iframe.gitbook-embed-light-surface,
 }
 
 .lab-css-sidebar-scroll {
-  max-height: 300px;
+  height: clamp(260px, 42vh, 460px);
   overflow-y: auto;
   padding: 0.56rem;
 }
 
 .lab-property-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 0.42rem;
 }
 
@@ -578,12 +572,8 @@ iframe.gitbook-embed-light-surface,
 }
 
 @media (max-width: 980px) {
-  .lab-css-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .lab-css-sidebar-scroll {
-    max-height: 220px;
+    height: 260px;
   }
 }
 
