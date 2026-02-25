@@ -144,15 +144,10 @@ export function buildReactSnippet(
   siteURL: string,
   sharedConfiguration: SharedConfiguration,
   mode: "assistant" | "docs",
-  rootCssOverrides: string,
 ) {
   const normalizedConfiguration = normalizeSharedConfiguration(sharedConfiguration);
-  const rootCssBlock = buildRootCssBlock(rootCssOverrides);
-  const cssPrefix = rootCssBlock
-    ? `/* Add this block to your global stylesheet */\n${rootCssBlock}\n\n`
-    : "";
 
-  return `${cssPrefix}import { GitBookProvider, GitBookFrame } from "@gitbook/embed/react";
+  return `import { GitBookProvider, GitBookFrame } from "@gitbook/embed/react";
 
 export function Preview() {
   return (
@@ -171,19 +166,14 @@ export function buildNpmSnippet(
   siteURL: string,
   sharedConfiguration: SharedConfiguration,
   mode: "assistant" | "docs",
-  rootCssOverrides: string,
 ) {
   const normalizedConfiguration = normalizeSharedConfiguration(sharedConfiguration);
-  const rootCssBlock = buildRootCssBlock(rootCssOverrides);
-  const cssPrefix = rootCssBlock
-    ? `/* Add this block to your global stylesheet */\n${rootCssBlock}\n\n`
-    : "";
   const modeNavigation =
     mode === "assistant"
       ? "frame.navigateToAssistant();"
       : "frame.navigateToPage(\"/\");";
 
-  return `${cssPrefix}import { createGitBook } from "@gitbook/embed";
+  return `import { createGitBook } from "@gitbook/embed";
 
 const config = ${toJson(normalizedConfiguration)};
 const iframe = document.createElement("iframe");
@@ -302,8 +292,8 @@ export function CodeSnippets({
   sharedConfiguration,
   scriptOnlyConfiguration,
 }: CodeSnippetsProps) {
-  const reactSnippet = buildReactSnippet(siteURL, sharedConfiguration, mode, rootCssOverrides);
-  const npmSnippet = buildNpmSnippet(siteURL, sharedConfiguration, mode, rootCssOverrides);
+  const reactSnippet = buildReactSnippet(siteURL, sharedConfiguration, mode);
+  const npmSnippet = buildNpmSnippet(siteURL, sharedConfiguration, mode);
   const scriptSnippet = buildScriptSnippet(
     siteURL,
     sharedConfiguration,

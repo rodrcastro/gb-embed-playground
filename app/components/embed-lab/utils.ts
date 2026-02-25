@@ -64,13 +64,40 @@ export const EDITABLE_ROOT_CSS_PROPERTIES = [
   "--gitbook-widget-window-spacing",
   "--gitbook-widget-window-width",
 ] as const;
-const ROOT_CSS_PROPERTY_SET = new Set<string>(EDITABLE_ROOT_CSS_PROPERTIES);
+const ROOT_CSS_PROPERTY_PREFIX = "--gitbook-widget-";
+const ROOT_CSS_PROPERTY_LOOKUP = new Map<string, string>(
+  EDITABLE_ROOT_CSS_PROPERTIES.flatMap((property) => [
+    [property, property],
+    [property.replace(ROOT_CSS_PROPERTY_PREFIX, ""), property],
+  ]),
+);
 
 export function normalizeRootCssDeclarations(input: string): string[] {
-  return input
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0);
+  const normalizedDeclarations: string[] = [];
+
+  for (const rawLine of input.split("\n")) {
+    const line = rawLine.trim();
+    if (!line || !line.endsWith(";") || line.includes("{") || line.includes("}")) {
+      continue;
+    }
+
+    const colonIndex = line.indexOf(":");
+    if (colonIndex <= 0) {
+      continue;
+    }
+
+    const rawProperty = line.slice(0, colonIndex).trim();
+    const property = ROOT_CSS_PROPERTY_LOOKUP.get(rawProperty);
+    const value = line.slice(colonIndex + 1, -1).trim();
+
+    if (!property || !value) {
+      continue;
+    }
+
+    normalizedDeclarations.push(`${property}: ${value};`);
+  }
+
+  return normalizedDeclarations;
 }
 
 export function validateRootCssOverrides(input: string): ValidationResult {
@@ -109,7 +136,7 @@ export function validateRootCssOverrides(input: string): ValidationResult {
     const property = line.slice(0, colonIndex).trim();
     const value = line.slice(colonIndex + 1, -1).trim();
 
-    if (!ROOT_CSS_PROPERTY_SET.has(property)) {
+    if (!ROOT_CSS_PROPERTY_LOOKUP.has(property)) {
       return {
         valid: false,
         message: `Line ${lineNumber}: '${property}' is not an editable GitBook widget property.`,

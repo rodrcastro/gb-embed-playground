@@ -70,12 +70,12 @@ export default function EmbedLab() {
       return configurationValidation;
     }
 
-    if (!rootCssValidation.valid) {
+    if (draftState.implementation === "script" && !rootCssValidation.valid) {
       return rootCssValidation;
     }
 
     return { valid: true };
-  }, [configurationValidation, rootCssValidation]);
+  }, [configurationValidation, draftState.implementation, rootCssValidation]);
 
   const isDirty = useMemo(
     () => JSON.stringify(draftState) !== JSON.stringify(appliedState),
@@ -102,8 +102,13 @@ export default function EmbedLab() {
       return;
     }
 
-    const declarations = normalizeRootCssDeclarations(appliedState.rootCssOverrides);
     const existing = document.getElementById(ROOT_CSS_OVERRIDES_STYLE_ID);
+    if (appliedState.implementation !== "script") {
+      existing?.remove();
+      return;
+    }
+
+    const declarations = normalizeRootCssDeclarations(appliedState.rootCssOverrides);
 
     if (declarations.length === 0) {
       existing?.remove();
@@ -120,7 +125,7 @@ export default function EmbedLab() {
     if (!existing) {
       document.head.appendChild(styleElement);
     }
-  }, [appliedState.rootCssOverrides]);
+  }, [appliedState.implementation, appliedState.rootCssOverrides]);
 
   useEffect(() => {
     return () => {
@@ -191,7 +196,7 @@ export default function EmbedLab() {
       return "All controls are active in Script mode.";
     }
 
-    return "Script button settings are preserved but inactive in this mode.";
+    return "Script-only settings (button and CSS overrides) are preserved but inactive in this mode.";
   }, [draftState.implementation, isDirty]);
 
   const resetToDefaults = () => {

@@ -679,33 +679,47 @@ export function ConfigEditor({
           title="CSS overrides (:root)"
           isOpen={openSections.css}
           onToggle={toggleSection}
+          badge={implementation === "script" ? "active" : "inactive"}
+          disabled={implementation !== "script"}
         >
-          <p className="lab-muted-note">
-            Add one declaration per line using the properties listed below.
-          </p>
+          {implementation !== "script" ? (
+            <p className="lab-muted-note">
+              CSS overrides are available only in Script implementation.
+            </p>
+          ) : (
+            <p className="lab-muted-note">
+              Add one declaration per line using the properties listed below. The
+              <code>--gitbook-widget-</code> prefix is added automatically.
+            </p>
+          )}
           <label className="lab-field">
             <span>Declarations</span>
             <textarea
               className="lab-textarea"
               rows={8}
               value={rootCssOverrides}
+              disabled={implementation !== "script"}
               onChange={(event) => onRootCssOverridesChange(event.target.value)}
               placeholder={
-                "--gitbook-widget-background-solid: #111111;\n--gitbook-widget-text-color: #f9f9f9;"
+                "background-solid: #111111;\ntext-color: #f9f9f9;"
               }
             />
           </label>
-          <span className={`lab-status-inline ${rootCssValidation.valid ? "ok" : "error"}`}>
-            {rootCssValidation.valid
-              ? "CSS overrides valid"
-              : rootCssValidation.message || "Invalid CSS overrides"}
-          </span>
+          {implementation === "script" ? (
+            <span className={`lab-status-inline ${rootCssValidation.valid ? "ok" : "error"}`}>
+              {rootCssValidation.valid
+                ? "CSS overrides valid"
+                : rootCssValidation.message || "Invalid CSS overrides"}
+            </span>
+          ) : (
+            <span className="lab-status-inline">Inactive in this mode.</span>
+          )}
 
           <div className="lab-inline-card mt-3">
             <p className="lab-status-meta mb-2">Available properties</p>
             <div className="grid gap-1">
               {EDITABLE_ROOT_CSS_PROPERTIES.map((property) => (
-                <code key={property}>{property}</code>
+                <code key={property}>{property.replace("--gitbook-widget-", "")}</code>
               ))}
             </div>
           </div>

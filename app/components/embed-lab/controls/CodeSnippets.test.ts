@@ -23,16 +23,10 @@ function createSharedConfiguration(): SharedConfiguration {
 
 describe("CodeSnippets", () => {
   it("includes closeButton in the NPM snippet", () => {
-    const snippet = buildNpmSnippet(
-      "https://docs.example.com",
-      createSharedConfiguration(),
-      "assistant",
-      "--gitbook-widget-primary: #111111;",
-    );
+    const snippet = buildNpmSnippet("https://docs.example.com", createSharedConfiguration(), "assistant");
 
     expect(snippet).toContain("closeButton: config.closeButton");
-    expect(snippet).toContain(":root {");
-    expect(snippet).toContain("--gitbook-widget-primary: #111111;");
+    expect(snippet).not.toContain(":root {");
   });
 
   it("uses fallback script sources and includes closeButton in script snippet", () => {
@@ -47,29 +41,19 @@ describe("CodeSnippets", () => {
       createSharedConfiguration(),
       scriptOnlyConfiguration,
       "assistant",
-      "--gitbook-widget-accent: #abcdef;",
+      "window-height: 30px;",
     );
 
     expect(snippet).toContain(GITBOOK_SCRIPT_URL);
     expect(snippet).toContain("~gitbook/embed/script.js");
     expect(snippet).toContain('"closeButton": true');
     expect(snippet).toContain("<style>");
-    expect(snippet).toContain("--gitbook-widget-accent: #abcdef;");
+    expect(snippet).toContain("--gitbook-widget-window-height: 30px;");
   });
 
   it("omits :root CSS block when no overrides are provided", () => {
-    const reactSnippet = buildReactSnippet(
-      "https://docs.example.com",
-      createSharedConfiguration(),
-      "assistant",
-      "",
-    );
-    const npmSnippet = buildNpmSnippet(
-      "https://docs.example.com",
-      createSharedConfiguration(),
-      "assistant",
-      "",
-    );
+    const reactSnippet = buildReactSnippet("https://docs.example.com", createSharedConfiguration(), "assistant");
+    const npmSnippet = buildNpmSnippet("https://docs.example.com", createSharedConfiguration(), "assistant");
     const scriptSnippet = buildScriptSnippet(
       "https://docs.example.com",
       createSharedConfiguration(),

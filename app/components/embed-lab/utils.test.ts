@@ -69,13 +69,13 @@ describe("embed utils", () => {
 
   it("accepts valid gitbook root CSS overrides", () => {
     const validation = validateRootCssOverrides(
-      "--gitbook-widget-background-solid: #111;\n\n--gitbook-widget-text-color: rgba(255, 255, 255, 0.9);",
+      "background-solid: #111;\n\ntext-color: rgba(255, 255, 255, 0.9);",
     );
     expect(validation.valid).toBe(true);
   });
 
   it("rejects root CSS overrides without semicolon", () => {
-    const validation = validateRootCssOverrides("--gitbook-widget-primary: #111");
+    const validation = validateRootCssOverrides("window-height: 30px");
     expect(validation.valid).toBe(false);
     expect(validation.message).toContain("must end with ';'");
   });
@@ -94,7 +94,7 @@ describe("embed utils", () => {
 
   it("normalizes root CSS declarations by trimming and removing blank lines", () => {
     const normalized = normalizeRootCssDeclarations(
-      "\n  --gitbook-widget-background-solid: #111;  \n\n--gitbook-widget-text-color: #fff;\n",
+      "\n  background-solid: #111;  \n\ntext-color: #fff;\n",
     );
     expect(normalized).toEqual([
       "--gitbook-widget-background-solid: #111;",
@@ -106,5 +106,10 @@ describe("embed utils", () => {
     const validation = validateRootCssOverrides("--gitbook-widget-primary: #111;");
     expect(validation.valid).toBe(false);
     expect(validation.message).toContain("not an editable GitBook widget property");
+  });
+
+  it("accepts full property names for backward compatibility", () => {
+    const validation = validateRootCssOverrides("--gitbook-widget-window-height: 30px;");
+    expect(validation.valid).toBe(true);
   });
 });
