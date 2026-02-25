@@ -6,6 +6,13 @@ const SITE_URL = "https://stage.docs.rodrcastro.dev";
 const CDN_SCRIPT_SRC = "https://cdn.jsdelivr.net/npm/@gitbook/embed@0.2.2/dist/script.js";
 const FORCE_HIDDEN_ATTR = "data-gitbook-force-hidden";
 
+declare global {
+  interface Window {
+    __gitBookCloseBridgeListeners?: Set<() => void>;
+    __gitBookCloseBridgeOriginalLog?: typeof console.log;
+  }
+}
+
 function resolveSiteScriptURL(siteURL: string): string {
   const url = new URL(siteURL);
   url.pathname = `${url.pathname.endsWith("/") ? url.pathname : `${url.pathname}/`}~gitbook/embed/script.js`;
@@ -35,6 +42,44 @@ function restoreGitBookScriptWidgetUI() {
   buttonEl?.style.removeProperty("visibility");
   buttonEl?.style.removeProperty("pointer-events");
   buttonEl?.removeAttribute(FORCE_HIDDEN_ATTR);
+}
+
+function addGitBookCloseBridgeListener(listener: () => void): () => void {
+  if (!window.__gitBookCloseBridgeListeners) {
+    window.__gitBookCloseBridgeListeners = new Set();
+  }
+
+  if (!window.__gitBookCloseBridgeOriginalLog) {
+    window.__gitBookCloseBridgeOriginalLog = console.log;
+    console.log = (...args: unknown[]) => {
+      window.__gitBookCloseBridgeOriginalLog?.(...args);
+
+      const first = args[0];
+      const payload = args[1] as { type?: string } | undefined;
+      const isGitBookRuntimeLog =
+        typeof first === "string" && first.includes("[gitbook:embed] received message");
+
+      if (isGitBookRuntimeLog && payload?.type === "close") {
+        for (const cb of window.__gitBookCloseBridgeListeners || []) {
+          cb();
+        }
+      }
+    };
+  }
+
+  window.__gitBookCloseBridgeListeners.add(listener);
+
+  return () => {
+    window.__gitBookCloseBridgeListeners?.delete(listener);
+    if ((window.__gitBookCloseBridgeListeners?.size || 0) > 0) {
+      return;
+    }
+
+    if (window.__gitBookCloseBridgeOriginalLog) {
+      console.log = window.__gitBookCloseBridgeOriginalLog;
+      window.__gitBookCloseBridgeOriginalLog = undefined;
+    }
+  };
 }
 
 function getGitBookEmbedIframes(): HTMLIFrameElement[] {
@@ -199,11 +244,23 @@ export default function GitBookEmbedScript() {
     };
 
     window.addEventListener("message", onFrameMessage);
+    const removeCloseBridge = addGitBookCloseBridgeListener(() => {
+      if (isDisposed) {
+        return;
+      }
+      if (window.GitBook) {
+        window.GitBook("close");
+        window.GitBook("hide");
+      }
+      forceCloseGitBookScriptWidgetUI();
+      hideGitBookScriptFrameNodes();
+    });
     void boot();
 
     return () => {
       isDisposed = true;
       activeFrameWindow = null;
+      removeCloseBridge();
       window.removeEventListener("message", onFrameMessage);
 
       if (scriptElement) {

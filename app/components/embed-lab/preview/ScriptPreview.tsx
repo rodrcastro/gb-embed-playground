@@ -33,6 +33,8 @@ declare global {
     GitBook?: ((command: GitBookCommand, ...args: unknown[]) => void) & {
       q?: unknown[][];
     };
+    __gitBookCloseBridgeListeners?: Set<() => void>;
+    __gitBookCloseBridgeOriginalLog?: typeof console.log;
   }
 }
 
@@ -88,6 +90,44 @@ function restoreGitBookScriptWidgetUI() {
   buttonEl?.style.removeProperty("visibility");
   buttonEl?.style.removeProperty("pointer-events");
   buttonEl?.removeAttribute(FORCE_HIDDEN_ATTR);
+}
+
+function addGitBookCloseBridgeListener(listener: () => void): () => void {
+  if (!window.__gitBookCloseBridgeListeners) {
+    window.__gitBookCloseBridgeListeners = new Set();
+  }
+
+  if (!window.__gitBookCloseBridgeOriginalLog) {
+    window.__gitBookCloseBridgeOriginalLog = console.log;
+    console.log = (...args: unknown[]) => {
+      window.__gitBookCloseBridgeOriginalLog?.(...args);
+
+      const first = args[0];
+      const payload = args[1] as { type?: string } | undefined;
+      const isGitBookRuntimeLog =
+        typeof first === "string" && first.includes("[gitbook:embed] received message");
+
+      if (isGitBookRuntimeLog && payload?.type === "close") {
+        for (const cb of window.__gitBookCloseBridgeListeners || []) {
+          cb();
+        }
+      }
+    };
+  }
+
+  window.__gitBookCloseBridgeListeners.add(listener);
+
+  return () => {
+    window.__gitBookCloseBridgeListeners?.delete(listener);
+    if ((window.__gitBookCloseBridgeListeners?.size || 0) > 0) {
+      return;
+    }
+
+    if (window.__gitBookCloseBridgeOriginalLog) {
+      console.log = window.__gitBookCloseBridgeOriginalLog;
+      window.__gitBookCloseBridgeOriginalLog = undefined;
+    }
+  };
 }
 
 export function cleanupGitBookScriptWidget() {
@@ -339,11 +379,24 @@ export function ScriptPreview({
     };
 
     window.addEventListener("message", onFrameMessage);
+    const removeCloseBridge = addGitBookCloseBridgeListener(() => {
+      if (cancelled) {
+        return;
+      }
+      if (typeof window.GitBook === "function") {
+        window.GitBook("close");
+        window.GitBook("hide");
+      }
+      forceCloseGitBookScriptWidgetUI();
+      hideGitBookScriptFrameNodes();
+      onStatus("Script embed close event received. Widget hidden.", "info");
+    });
     void boot();
 
     return () => {
       cancelled = true;
       activeFrameWindow = null;
+      removeCloseBridge();
       window.removeEventListener("message", onFrameMessage);
       cleanupGitBookScriptWidget();
     };
