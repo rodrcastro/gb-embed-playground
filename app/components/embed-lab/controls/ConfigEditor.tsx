@@ -12,6 +12,9 @@ interface ConfigEditorProps {
   implementation: "react" | "npm" | "script";
   siteURL: string;
   onSiteURLChange: (value: string) => void;
+  rootCssOverrides: string;
+  onRootCssOverridesChange: (value: string) => void;
+  rootCssValidation: ValidationResult;
   sharedConfiguration: SharedConfiguration;
   scriptOnlyConfiguration: ScriptOnlyConfiguration;
   onSharedConfigurationChange: (value: SharedConfiguration) => void;
@@ -29,6 +32,7 @@ type SectionId =
   | "tools"
   | "visitor"
   | "script"
+  | "css"
   | "json";
 
 function splitLines(value: string): string[] {
@@ -91,6 +95,9 @@ export function ConfigEditor({
   implementation,
   siteURL,
   onSiteURLChange,
+  rootCssOverrides,
+  onRootCssOverridesChange,
+  rootCssValidation,
   sharedConfiguration,
   scriptOnlyConfiguration,
   onSharedConfigurationChange,
@@ -107,6 +114,7 @@ export function ConfigEditor({
     tools: false,
     visitor: false,
     script: false,
+    css: false,
     json: false,
   });
 
@@ -640,6 +648,32 @@ export function ConfigEditor({
               }
             />
           </label>
+        </AccordionSection>
+
+        <AccordionSection
+          id="css"
+          title="CSS overrides (:root)"
+          isOpen={openSections.css}
+          onToggle={toggleSection}
+        >
+          <p className="lab-muted-note">
+            Add one declaration per line. Only <code>--gitbook-widget*</code> properties are allowed.
+          </p>
+          <label className="lab-field">
+            <span>Declarations</span>
+            <textarea
+              className="lab-textarea"
+              rows={8}
+              value={rootCssOverrides}
+              onChange={(event) => onRootCssOverridesChange(event.target.value)}
+              placeholder={"--gitbook-widget-primary: #111111;\n--gitbook-widget-text: #f9f9f9;"}
+            />
+          </label>
+          <span className={`lab-status-inline ${rootCssValidation.valid ? "ok" : "error"}`}>
+            {rootCssValidation.valid
+              ? "CSS overrides valid"
+              : rootCssValidation.message || "Invalid CSS overrides"}
+          </span>
         </AccordionSection>
       </div>
 

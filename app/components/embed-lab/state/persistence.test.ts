@@ -14,6 +14,7 @@ function createStateWithToken(): PlaygroundState {
     implementation: "react",
     siteURL: "https://docs.example.com",
     mode: "assistant",
+    rootCssOverrides: "--gitbook-widget-primary: #111111;",
     sharedConfiguration: {
       tabs: ["assistant", "docs"],
       closeButton: false,
@@ -56,6 +57,7 @@ describe("state persistence security", () => {
 
     expect(safeState.sharedConfiguration.visitor.jwt_token).toBeUndefined();
     expect(safeState.sharedConfiguration.visitor.token).toBeUndefined();
+    expect(safeState.rootCssOverrides).toBe("");
   });
 
   it("never serializes jwt token into URL parameter", () => {
@@ -66,6 +68,7 @@ describe("state persistence security", () => {
     expect(decoded).not.toBeNull();
     expect(decoded?.sharedConfiguration.visitor.jwt_token).toBeUndefined();
     expect(decoded?.sharedConfiguration.visitor.token).toBeUndefined();
+    expect(decoded?.rootCssOverrides).toBe("");
   });
 
   it("writes redacted state to localStorage", () => {
@@ -75,6 +78,7 @@ describe("state persistence security", () => {
     const persisted = window.localStorage.getItem(LOCAL_STORAGE_KEY);
     expect(persisted).toBeTruthy();
     expect(persisted).not.toContain("sensitive-token");
+    expect(persisted).not.toContain("--gitbook-widget-primary");
   });
 
   it("writes redacted state to URL", () => {
@@ -88,5 +92,6 @@ describe("state persistence security", () => {
     const decoded = deserializeStateFromParam(encoded!);
     expect(decoded?.sharedConfiguration.visitor.jwt_token).toBeUndefined();
     expect(decoded?.sharedConfiguration.visitor.token).toBeUndefined();
+    expect(decoded?.rootCssOverrides).toBe("");
   });
 });

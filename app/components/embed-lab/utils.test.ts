@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { PlaygroundState } from "./types";
 import {
+  normalizeRootCssDeclarations,
   resolveVisitorAuthMode,
   resolveVisitorJWTToken,
   sanitizeState,
+  validateRootCssOverrides,
   withJWTTokenQueryParameter,
 } from "./utils";
 
@@ -62,5 +64,41 @@ describe("embed utils", () => {
     expect(sanitized.sharedConfiguration.visitor.authMode).toBe("manual-jwt");
     expect(sanitized.sharedConfiguration.visitor.jwt_token).toBe("legacy-token");
     expect(sanitized.sharedConfiguration.visitor.token).toBeUndefined();
+    expect(sanitized.rootCssOverrides).toBe("");
+  });
+
+  it("accepts valid gitbook root CSS overrides", () => {
+    const validation = validateRootCssOverrides(
+      "--gitbook-widget-primary: #111;\n\n--gitbook-widget-text-color: rgba(255, 255, 255, 0.9);",
+    );
+    expect(validation.valid).toBe(true);
+  });
+
+  it("rejects root CSS overrides without semicolon", () => {
+    const validation = validateRootCssOverrides("--gitbook-widget-primary: #111");
+    expect(validation.valid).toBe(false);
+    expect(validation.message).toContain("must end with ';'");
+  });
+
+  it("rejects non-gitbook custom properties in root CSS overrides", () => {
+    const validation = validateRootCssOverrides("--background: #111;");
+    expect(validation.valid).toBe(false);
+    expect(validation.message).toContain("--gitbook-widget");
+  });
+
+  it("rejects selectors and braces in root CSS overrides", () => {
+    const validation = validateRootCssOverrides(":root { --gitbook-widget-primary: #111; }");
+    expect(validation.valid).toBe(false);
+    expect(validation.message).toContain("selectors and braces");
+  });
+
+  it("normalizes root CSS declarations by trimming and removing blank lines", () => {
+    const normalized = normalizeRootCssDeclarations(
+      "\n  --gitbook-widget-primary: #111;  \n\n--gitbook-widget-text: #fff;\n",
+    );
+    expect(normalized).toEqual([
+      "--gitbook-widget-primary: #111;",
+      "--gitbook-widget-text: #fff;",
+    ]);
   });
 });

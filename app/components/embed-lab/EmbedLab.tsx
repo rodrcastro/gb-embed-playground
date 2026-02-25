@@ -18,10 +18,14 @@ import {
 import { EmbedLabStatus, PlaygroundState } from "./types";
 import {
   formatConfigurationJson,
+  normalizeRootCssDeclarations,
   parseConfigurationJson,
   sanitizeState,
   validateConfiguration,
+  validateRootCssOverrides,
 } from "./utils";
+
+const ROOT_CSS_OVERRIDES_STYLE_ID = "gitbook-embed-root-overrides";
 
 function resolveInitialState(): PlaygroundState {
   const fromUrl = readStateFromUrl();
@@ -53,10 +57,25 @@ export default function EmbedLab() {
     message: "Ready. Edit settings, then save to refresh preview.",
   });
 
-  const validation = useMemo(
+  const configurationValidation = useMemo(
     () => validateConfiguration(draftState.sharedConfiguration, draftState.scriptOnlyConfiguration),
     [draftState.sharedConfiguration, draftState.scriptOnlyConfiguration],
   );
+  const rootCssValidation = useMemo(
+    () => validateRootCssOverrides(draftState.rootCssOverrides),
+    [draftState.rootCssOverrides],
+  );
+  const combinedValidation = useMemo(() => {
+    if (!configurationValidation.valid) {
+      return configurationValidation;
+    }
+
+    if (!rootCssValidation.valid) {
+      return rootCssValidation;
+    }
+
+    return { valid: true };
+  }, [configurationValidation, rootCssValidation]);
 
   const isDirty = useMemo(
     () => JSON.stringify(draftState) !== JSON.stringify(appliedState),
@@ -77,6 +96,40 @@ export default function EmbedLab() {
       cleanupGitBookScriptWidget();
     }
   }, [appliedState.implementation, previewRevision]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const declarations = normalizeRootCssDeclarations(appliedState.rootCssOverrides);
+    const existing = document.getElementById(ROOT_CSS_OVERRIDES_STYLE_ID);
+
+    if (declarations.length === 0) {
+      existing?.remove();
+      return;
+    }
+
+    const cssText = [":root {", ...declarations.map((declaration) => `  ${declaration}`), "}"].join("\n");
+    const styleElement =
+      existing instanceof HTMLStyleElement ? existing : document.createElement("style");
+
+    styleElement.id = ROOT_CSS_OVERRIDES_STYLE_ID;
+    styleElement.textContent = cssText;
+
+    if (!existing) {
+      document.head.appendChild(styleElement);
+    }
+  }, [appliedState.rootCssOverrides]);
+
+  useEffect(() => {
+    return () => {
+      if (typeof document === "undefined") {
+        return;
+      }
+      document.getElementById(ROOT_CSS_OVERRIDES_STYLE_ID)?.remove();
+    };
+  }, []);
 
   const updateStatus = useCallback((message: string, level: "info" | "success" | "error" = "info") => {
     setStatus({ message, level });
@@ -116,10 +169,10 @@ export default function EmbedLab() {
       return;
     }
 
-    if (!validation.valid) {
+    if (!combinedValidation.valid) {
       setStatus({
         level: "error",
-        message: validation.message || "Configuration is invalid.",
+        message: combinedValidation.message || "Configuration is invalid.",
       });
       return;
     }
@@ -169,11 +222,11 @@ export default function EmbedLab() {
     });
   };
 
-  const visibleStatus = validation.valid
+  const visibleStatus = combinedValidation.valid
     ? status
     : {
         level: "error" as const,
-        message: validation.message || "Configuration is invalid.",
+        message: combinedValidation.message || "Configuration is invalid.",
       };
 
   return (
@@ -257,6 +310,11 @@ export default function EmbedLab() {
             implementation={draftState.implementation}
             siteURL={draftState.siteURL}
             onSiteURLChange={(siteURL) => setDraftState((prev) => ({ ...prev, siteURL }))}
+            rootCssOverrides={draftState.rootCssOverrides}
+            onRootCssOverridesChange={(rootCssOverrides) =>
+              setDraftState((prev) => ({ ...prev, rootCssOverrides }))
+            }
+            rootCssValidation={rootCssValidation}
             sharedConfiguration={draftState.sharedConfiguration}
             scriptOnlyConfiguration={draftState.scriptOnlyConfiguration}
             onSharedConfigurationChange={setSharedConfiguration}
@@ -264,7 +322,7 @@ export default function EmbedLab() {
             rawConfiguration={rawConfiguration}
             onRawConfigurationChange={setRawConfiguration}
             onApplyRawConfiguration={applyRawConfiguration}
-            lastValidation={validation}
+            lastValidation={configurationValidation}
           />
 
           <details className="lab-panel lab-toggle-panel">
@@ -276,6 +334,7 @@ export default function EmbedLab() {
               <CodeSnippets
                 siteURL={appliedState.siteURL}
                 mode={appliedState.mode}
+                rootCssOverrides={appliedState.rootCssOverrides}
                 sharedConfiguration={appliedState.sharedConfiguration}
                 scriptOnlyConfiguration={appliedState.scriptOnlyConfiguration}
               />

@@ -40,6 +40,76 @@ function parseToolInputSchema(tool: ToolConfig): Record<string, unknown> | undef
   };
 }
 
+const ROOT_CSS_PROPERTY_REGEX = /^--gitbook-widget[a-z0-9_-]*$/;
+
+export function normalizeRootCssDeclarations(input: string): string[] {
+  return input
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
+
+export function validateRootCssOverrides(input: string): ValidationResult {
+  const lines = input.split("\n");
+
+  for (const [index, rawLine] of lines.entries()) {
+    const line = rawLine.trim();
+    if (!line) {
+      continue;
+    }
+
+    const lineNumber = index + 1;
+
+    if (line.includes("{") || line.includes("}")) {
+      return {
+        valid: false,
+        message: `Line ${lineNumber}: selectors and braces are not allowed.`,
+      };
+    }
+
+    if (!line.endsWith(";")) {
+      return {
+        valid: false,
+        message: `Line ${lineNumber}: declaration must end with ';'.`,
+      };
+    }
+
+    const colonIndex = line.indexOf(":");
+    if (colonIndex <= 0) {
+      return {
+        valid: false,
+        message: `Line ${lineNumber}: declaration must use 'property: value;'.`,
+      };
+    }
+
+    const property = line.slice(0, colonIndex).trim();
+    const value = line.slice(colonIndex + 1, -1).trim();
+
+    if (!ROOT_CSS_PROPERTY_REGEX.test(property)) {
+      return {
+        valid: false,
+        message: `Line ${lineNumber}: only --gitbook-widget* custom properties are allowed.`,
+      };
+    }
+
+    if (!value) {
+      return {
+        valid: false,
+        message: `Line ${lineNumber}: custom property value cannot be empty.`,
+      };
+    }
+
+    if (value.includes(";")) {
+      return {
+        valid: false,
+        message: `Line ${lineNumber}: use one declaration per line.`,
+      };
+    }
+  }
+
+  return { valid: true };
+}
+
 export function resolveVisitorAuthMode(visitor: VisitorConfig | undefined): VisitorAuthMode {
   return visitor?.authMode === "provider-integration" ? "provider-integration" : "manual-jwt";
 }
@@ -298,6 +368,7 @@ export function sanitizeState(input: PlaygroundState): PlaygroundState {
         ? input.implementation
         : "react",
     mode: input.mode === "assistant" || input.mode === "docs" ? input.mode : "assistant",
+    rootCssOverrides: typeof input.rootCssOverrides === "string" ? input.rootCssOverrides : "",
     sharedConfiguration: {
       ...sharedConfiguration,
       tabs: Array.isArray(sharedConfiguration.tabs)
