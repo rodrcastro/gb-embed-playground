@@ -6,6 +6,7 @@ export const DEFAULT_PLAYGROUND_STATE: PlaygroundState = {
   mode: "assistant",
   sharedConfiguration: {
     tabs: ["assistant", "docs"],
+    closeButton: true,
     actions: [
       {
         id: "a1",
@@ -54,7 +55,7 @@ export const DEFAULT_PLAYGROUND_STATE: PlaygroundState = {
   },
 };
 
-export const GITBOOK_SCRIPT_URL = "https://cdn.jsdelivr.net/npm/@gitbook/embed/dist/script.js";
+export const GITBOOK_SCRIPT_URL = "https://cdn.jsdelivr.net/npm/@gitbook/embed@0.2.2/dist/script.js";
 
 export const URL_STATE_PARAM = "gb";
 export const LOCAL_STORAGE_KEY = "gitbook-embed-lab-state";

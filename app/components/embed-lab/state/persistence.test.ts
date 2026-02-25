@@ -16,6 +16,7 @@ function createStateWithToken(): PlaygroundState {
     mode: "assistant",
     sharedConfiguration: {
       tabs: ["assistant", "docs"],
+      closeButton: false,
       actions: [],
       greeting: {},
       suggestions: [],

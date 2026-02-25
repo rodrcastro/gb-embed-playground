@@ -6,6 +6,7 @@ import {
   SharedConfiguration,
   ValidationResult,
 } from "../types";
+import { MonacoJsonEditor } from "./MonacoJsonEditor";
 
 interface ConfigEditorProps {
   implementation: "react" | "npm" | "script";
@@ -177,6 +178,22 @@ export function ConfigEditor({
                 Docs
               </label>
             </div>
+          </div>
+          <div className="lab-field">
+            <span>closeButton</span>
+            <label className="lab-check-row">
+              <input
+                type="checkbox"
+                checked={sharedConfiguration.closeButton}
+                onChange={(event) =>
+                  onSharedConfigurationChange({
+                    ...sharedConfiguration,
+                    closeButton: event.target.checked,
+                  })
+                }
+              />
+              Show close button
+            </label>
           </div>
         </AccordionSection>
 
@@ -633,11 +650,9 @@ export function ConfigEditor({
           isOpen={openSections.json}
           onToggle={toggleSection}
         >
-          <textarea
-            className="lab-textarea lab-textarea-code"
-            rows={24}
+          <MonacoJsonEditor
             value={rawConfiguration}
-            onChange={(event) => onRawConfigurationChange(event.target.value)}
+            onChange={onRawConfigurationChange}
           />
           <div className="lab-row">
             <button type="button" className="lab-button" onClick={onApplyRawConfiguration}>

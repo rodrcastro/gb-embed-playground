@@ -16,6 +16,7 @@ interface GitBookRuntime {
   configure: (config: Record<string, unknown>) => void;
   navigateToPage?: (path: string) => void;
   navigateToAssistant?: () => void;
+  on?: (event: string, listener: () => void) => () => void;
 }
 
 interface GitBookClientRuntime {
@@ -75,10 +76,16 @@ export function NpmPreview({
 
         gitbook.configure({
           tabs: configuration.tabs,
+          closeButton: configuration.closeButton,
           actions: configuration.actions,
           greeting: configuration.greeting,
           suggestions: configuration.suggestions,
           tools: configuration.tools,
+        });
+
+        const unsubscribeClose = gitbook.on?.("close", () => {
+          iframe.style.display = "none";
+          onStatus("NPM embed close event received. Frame hidden.", "info");
         });
 
         if (mode === "assistant") {
@@ -89,6 +96,7 @@ export function NpmPreview({
 
         onStatus("NPM embed applied.", "success");
         cleanup = () => {
+          unsubscribeClose?.();
           iframe.remove();
         };
       } catch (error) {

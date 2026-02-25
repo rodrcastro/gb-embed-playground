@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { GITBOOK_SCRIPT_URL } from "../defaults";
 import { ScriptOnlyConfiguration, SharedConfiguration } from "../types";
 import { resolveVisitorJWTToken } from "../utils";
 
@@ -181,10 +182,14 @@ document.querySelector("#gitbook-target")?.append(iframe);
 const frame = client.createFrame(iframe);
 frame.configure({
   tabs: config.tabs,
+  closeButton: config.closeButton,
   actions: config.actions,
   greeting: config.greeting,
   suggestions: config.suggestions,
   tools: config.tools
+});
+const unsubscribe = frame.on("close", () => {
+  iframe.style.display = "none";
 });
 ${modeNavigation}`;
 }
@@ -196,36 +201,75 @@ export function buildScriptSnippet(
   mode: "assistant" | "docs",
 ) {
   const normalizedConfiguration = normalizeSharedConfiguration(sharedConfiguration);
-  const normalizedSiteURL = siteURL.endsWith("/") ? siteURL.slice(0, -1) : siteURL;
+  const siteScriptURL = (() => {
+    try {
+      const url = new URL(siteURL);
+      url.pathname = `${url.pathname.endsWith("/") ? url.pathname : `${url.pathname}/`}~gitbook/embed/script.js`;
+      url.search = "";
+      url.hash = "";
+      return url.toString();
+    } catch {
+      return "";
+    }
+  })();
   const unsignedClaimsJson = sharedConfiguration.visitor.unsignedClaimsJson?.trim();
   const unsignedClaimsExpression = unsignedClaimsJson
     ? `JSON.parse(${JSON.stringify(unsignedClaimsJson)})`
     : "undefined";
   const jwtToken = resolveVisitorJWTToken(sharedConfiguration.visitor) || "";
 
-  return `<script async src="${normalizedSiteURL}/~gitbook/embed/script.js"></script>
-<script>
-  const jwtToken = ${JSON.stringify(jwtToken)}.trim();
-  const unsignedClaims = ${unsignedClaimsExpression};
-  window.GitBook(
-    "init",
-    { siteURL: "${siteURL}" },
-    jwtToken || unsignedClaims
-      ? { visitor: { jwt_token: jwtToken || undefined, unsignedClaims } }
-      : undefined
-  );
-  window.GitBook("configure", {
-    ...${toJson(normalizedConfiguration)},
-    ...${toJson(scriptOnlyConfiguration)}
-  });
-  window.GitBook("show");
-  window.GitBook("open");
-  ${
-    mode === "assistant"
-      ? 'window.GitBook("navigateToAssistant");'
-      : 'window.GitBook("navigateToPage", "/");'
-  }
-</script>`;
+  return `<script>
+  const loadScript = (src) =>
+    new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.async = true;
+      script.src = src;
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error("Failed to load " + src));
+      document.head.appendChild(script);
+    });
+
+  const bootstrapGitBook = async () => {
+    const scriptSources = [${JSON.stringify(siteScriptURL)}, ${JSON.stringify(GITBOOK_SCRIPT_URL)}].filter(Boolean);
+    for (const src of scriptSources) {
+      try {
+        await loadScript(src);
+        if (window.GitBook) break;
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    if (!window.GitBook) {
+      console.error("GitBook script failed to load from all sources.");
+      return;
+    }
+
+    const jwtToken = ${JSON.stringify(jwtToken)}.trim();
+    const unsignedClaims = ${unsignedClaimsExpression};
+    window.GitBook(
+      "init",
+      { siteURL: "${siteURL}" },
+      jwtToken || unsignedClaims
+        ? { visitor: { jwt_token: jwtToken || undefined, unsignedClaims } }
+        : undefined
+    );
+    window.GitBook("configure", {
+      ...${toJson(normalizedConfiguration)},
+      ...${toJson(scriptOnlyConfiguration)}
+    });
+    window.GitBook("show");
+    window.GitBook("open");
+    ${
+      mode === "assistant"
+        ? 'window.GitBook("navigateToAssistant");'
+        : 'window.GitBook("navigateToPage", "/");'
+    }
+  };
+
+  bootstrapGitBook();
+</script>
+`;
 }
 
 export function CodeSnippets({
