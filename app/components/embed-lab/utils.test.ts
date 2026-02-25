@@ -69,7 +69,7 @@ describe("embed utils", () => {
 
   it("accepts valid gitbook root CSS overrides", () => {
     const validation = validateRootCssOverrides(
-      "--gitbook-widget-primary: #111;\n\n--gitbook-widget-text-color: rgba(255, 255, 255, 0.9);",
+      "--gitbook-widget-background-solid: #111;\n\n--gitbook-widget-text-color: rgba(255, 255, 255, 0.9);",
     );
     expect(validation.valid).toBe(true);
   });
@@ -83,22 +83,28 @@ describe("embed utils", () => {
   it("rejects non-gitbook custom properties in root CSS overrides", () => {
     const validation = validateRootCssOverrides("--background: #111;");
     expect(validation.valid).toBe(false);
-    expect(validation.message).toContain("--gitbook-widget");
+    expect(validation.message).toContain("not an editable GitBook widget property");
   });
 
   it("rejects selectors and braces in root CSS overrides", () => {
-    const validation = validateRootCssOverrides(":root { --gitbook-widget-primary: #111; }");
+    const validation = validateRootCssOverrides(":root { --gitbook-widget-background-solid: #111; }");
     expect(validation.valid).toBe(false);
     expect(validation.message).toContain("selectors and braces");
   });
 
   it("normalizes root CSS declarations by trimming and removing blank lines", () => {
     const normalized = normalizeRootCssDeclarations(
-      "\n  --gitbook-widget-primary: #111;  \n\n--gitbook-widget-text: #fff;\n",
+      "\n  --gitbook-widget-background-solid: #111;  \n\n--gitbook-widget-text-color: #fff;\n",
     );
     expect(normalized).toEqual([
-      "--gitbook-widget-primary: #111;",
-      "--gitbook-widget-text: #fff;",
+      "--gitbook-widget-background-solid: #111;",
+      "--gitbook-widget-text-color: #fff;",
     ]);
+  });
+
+  it("rejects unknown gitbook-widget properties that are not editable", () => {
+    const validation = validateRootCssOverrides("--gitbook-widget-primary: #111;");
+    expect(validation.valid).toBe(false);
+    expect(validation.message).toContain("not an editable GitBook widget property");
   });
 });

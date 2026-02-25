@@ -6,6 +6,7 @@ import {
   SharedConfiguration,
   ValidationResult,
 } from "../types";
+import { EDITABLE_ROOT_CSS_PROPERTIES } from "../utils";
 import { MonacoJsonEditor } from "./MonacoJsonEditor";
 
 interface ConfigEditorProps {
@@ -650,31 +651,6 @@ export function ConfigEditor({
           </label>
         </AccordionSection>
 
-        <AccordionSection
-          id="css"
-          title="CSS overrides (:root)"
-          isOpen={openSections.css}
-          onToggle={toggleSection}
-        >
-          <p className="lab-muted-note">
-            Add one declaration per line. Only <code>--gitbook-widget*</code> properties are allowed.
-          </p>
-          <label className="lab-field">
-            <span>Declarations</span>
-            <textarea
-              className="lab-textarea"
-              rows={8}
-              value={rootCssOverrides}
-              onChange={(event) => onRootCssOverridesChange(event.target.value)}
-              placeholder={"--gitbook-widget-primary: #111111;\n--gitbook-widget-text: #f9f9f9;"}
-            />
-          </label>
-          <span className={`lab-status-inline ${rootCssValidation.valid ? "ok" : "error"}`}>
-            {rootCssValidation.valid
-              ? "CSS overrides valid"
-              : rootCssValidation.message || "Invalid CSS overrides"}
-          </span>
-        </AccordionSection>
       </div>
 
       <div className="lab-panel-stack">
@@ -695,6 +671,43 @@ export function ConfigEditor({
             <span className={`lab-status-inline ${lastValidation.valid ? "ok" : "error"}`}>
               {lastValidation.valid ? "Configuration valid" : lastValidation.message || "Invalid configuration"}
             </span>
+          </div>
+        </AccordionSection>
+
+        <AccordionSection
+          id="css"
+          title="CSS overrides (:root)"
+          isOpen={openSections.css}
+          onToggle={toggleSection}
+        >
+          <p className="lab-muted-note">
+            Add one declaration per line using the properties listed below.
+          </p>
+          <label className="lab-field">
+            <span>Declarations</span>
+            <textarea
+              className="lab-textarea"
+              rows={8}
+              value={rootCssOverrides}
+              onChange={(event) => onRootCssOverridesChange(event.target.value)}
+              placeholder={
+                "--gitbook-widget-background-solid: #111111;\n--gitbook-widget-text-color: #f9f9f9;"
+              }
+            />
+          </label>
+          <span className={`lab-status-inline ${rootCssValidation.valid ? "ok" : "error"}`}>
+            {rootCssValidation.valid
+              ? "CSS overrides valid"
+              : rootCssValidation.message || "Invalid CSS overrides"}
+          </span>
+
+          <div className="lab-inline-card mt-3">
+            <p className="lab-status-meta mb-2">Available properties</p>
+            <div className="grid gap-1">
+              {EDITABLE_ROOT_CSS_PROPERTIES.map((property) => (
+                <code key={property}>{property}</code>
+              ))}
+            </div>
           </div>
         </AccordionSection>
       </div>

@@ -40,7 +40,31 @@ function parseToolInputSchema(tool: ToolConfig): Record<string, unknown> | undef
   };
 }
 
-const ROOT_CSS_PROPERTY_REGEX = /^--gitbook-widget[a-z0-9_-]*$/;
+export const EDITABLE_ROOT_CSS_PROPERTIES = [
+  "--gitbook-widget-background-solid",
+  "--gitbook-widget-background-solid-hover",
+  "--gitbook-widget-background-translucent",
+  "--gitbook-widget-background-translucent-hover",
+  "--gitbook-widget-border-color",
+  "--gitbook-widget-bottom",
+  "--gitbook-widget-button-height",
+  "--gitbook-widget-easing",
+  "--gitbook-widget-easing-bounce",
+  "--gitbook-widget-icon-size",
+  "--gitbook-widget-left",
+  "--gitbook-widget-radius",
+  "--gitbook-widget-right",
+  "--gitbook-widget-text-color",
+  "--gitbook-widget-text-size",
+  "--gitbook-widget-top",
+  "--gitbook-widget-transition-duration-fast",
+  "--gitbook-widget-transition-duration-slow",
+  "--gitbook-widget-window-bottom",
+  "--gitbook-widget-window-height",
+  "--gitbook-widget-window-spacing",
+  "--gitbook-widget-window-width",
+] as const;
+const ROOT_CSS_PROPERTY_SET = new Set<string>(EDITABLE_ROOT_CSS_PROPERTIES);
 
 export function normalizeRootCssDeclarations(input: string): string[] {
   return input
@@ -85,10 +109,10 @@ export function validateRootCssOverrides(input: string): ValidationResult {
     const property = line.slice(0, colonIndex).trim();
     const value = line.slice(colonIndex + 1, -1).trim();
 
-    if (!ROOT_CSS_PROPERTY_REGEX.test(property)) {
+    if (!ROOT_CSS_PROPERTY_SET.has(property)) {
       return {
         valid: false,
-        message: `Line ${lineNumber}: only --gitbook-widget* custom properties are allowed.`,
+        message: `Line ${lineNumber}: '${property}' is not an editable GitBook widget property.`,
       };
     }
 
