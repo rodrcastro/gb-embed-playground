@@ -33,10 +33,10 @@ declare global {
     GitBook?: ((command: GitBookCommand, ...args: unknown[]) => void) & {
       q?: unknown[][];
     };
-    __gitBookCloseBridgeListeners?: Set<() => void>;
-    __gitBookCloseBridgeOriginalLog?: typeof console.log;
   }
 }
+
+const FORCE_HIDDEN_ATTR = "data-gitbook-force-hidden";
 
 function getGitBookEmbedIframes(): HTMLIFrameElement[] {
   return Array.from(document.querySelectorAll<HTMLIFrameElement>("iframe")).filter((frame) => {
@@ -45,12 +45,9 @@ function getGitBookEmbedIframes(): HTMLIFrameElement[] {
   });
 }
 
-function isMessageFromGitBookEmbedFrame(event: MessageEvent): boolean {
-  if (!event.source) {
-    return false;
-  }
-
-  return getGitBookEmbedIframes().some((frame) => frame.contentWindow === event.source);
+function resolveLatestGitBookEmbedFrameWindow(): Window | null {
+  const frames = getGitBookEmbedIframes();
+  return frames[frames.length - 1]?.contentWindow || null;
 }
 
 function resolveMessageType(data: unknown): string | undefined {
@@ -77,42 +74,20 @@ function forceCloseGitBookScriptWidgetUI() {
   buttonEl?.classList.remove("open");
 }
 
-function addGitBookCloseBridgeListener(listener: () => void): () => void {
-  if (!window.__gitBookCloseBridgeListeners) {
-    window.__gitBookCloseBridgeListeners = new Set();
-  }
+function restoreGitBookScriptWidgetUI() {
+  const windowEl = document.getElementById("gitbook-widget-window");
+  const buttonEl = document.getElementById("gitbook-widget-button");
 
-  if (!window.__gitBookCloseBridgeOriginalLog) {
-    window.__gitBookCloseBridgeOriginalLog = console.log;
-    console.log = (...args: unknown[]) => {
-      window.__gitBookCloseBridgeOriginalLog?.(...args);
+  windowEl?.classList.remove("hidden");
+  windowEl?.style.removeProperty("display");
+  windowEl?.style.removeProperty("visibility");
+  windowEl?.style.removeProperty("pointer-events");
+  windowEl?.removeAttribute(FORCE_HIDDEN_ATTR);
 
-      const first = args[0];
-      const payload = args[1] as { type?: string } | undefined;
-      const isGitBookLog =
-        typeof first === "string" && first.includes("[gitbook:embed] received message");
-
-      if (isGitBookLog && payload?.type === "close") {
-        for (const cb of window.__gitBookCloseBridgeListeners || []) {
-          cb();
-        }
-      }
-    };
-  }
-
-  window.__gitBookCloseBridgeListeners.add(listener);
-
-  return () => {
-    window.__gitBookCloseBridgeListeners?.delete(listener);
-    if ((window.__gitBookCloseBridgeListeners?.size || 0) > 0) {
-      return;
-    }
-
-    if (window.__gitBookCloseBridgeOriginalLog) {
-      console.log = window.__gitBookCloseBridgeOriginalLog;
-      window.__gitBookCloseBridgeOriginalLog = undefined;
-    }
-  };
+  buttonEl?.style.removeProperty("display");
+  buttonEl?.style.removeProperty("visibility");
+  buttonEl?.style.removeProperty("pointer-events");
+  buttonEl?.removeAttribute(FORCE_HIDDEN_ATTR);
 }
 
 export function cleanupGitBookScriptWidget() {
@@ -185,9 +160,20 @@ function hideGitBookScriptFrameNodes() {
   }
 
   nodesToHide.forEach((node) => {
+    node.setAttribute(FORCE_HIDDEN_ATTR, "1");
     node.style.setProperty("display", "none", "important");
     node.style.setProperty("visibility", "hidden", "important");
     node.style.setProperty("pointer-events", "none", "important");
+  });
+}
+
+function restoreGitBookScriptFrameNodes() {
+  const hiddenNodes = Array.from(document.querySelectorAll<HTMLElement>(`[${FORCE_HIDDEN_ATTR}="1"]`));
+  hiddenNodes.forEach((node) => {
+    node.style.removeProperty("display");
+    node.style.removeProperty("visibility");
+    node.style.removeProperty("pointer-events");
+    node.removeAttribute(FORCE_HIDDEN_ATTR);
   });
 }
 
@@ -218,6 +204,7 @@ export function ScriptPreview({
 
   useEffect(() => {
     let cancelled = false;
+    let activeFrameWindow: Window | null = null;
     const scriptURLs = [resolveSiteScriptURL(siteURL), GITBOOK_SCRIPT_URL].filter(Boolean) as string[];
     const jwtToken = effectiveJWTToken;
     const unsignedClaims = configuration.visitor?.user?.unsignedClaims;
@@ -241,6 +228,8 @@ export function ScriptPreview({
         return;
       }
 
+      restoreGitBookScriptFrameNodes();
+      restoreGitBookScriptWidgetUI();
       cleanupGitBookScriptWidget();
       window.GitBook(
         "init",
@@ -257,11 +246,25 @@ export function ScriptPreview({
         window.GitBook("navigateToPage", "/");
       }
 
+      window.setTimeout(() => {
+        activeFrameWindow = resolveLatestGitBookEmbedFrameWindow();
+        restoreGitBookScriptFrameNodes();
+        restoreGitBookScriptWidgetUI();
+      }, 0);
+
       onStatus("Script embed reloaded.", "success");
     };
 
     const onFrameMessage = (event: MessageEvent) => {
-      if (!isMessageFromGitBookEmbedFrame(event)) {
+      if (!event.source) {
+        return;
+      }
+
+      if (!activeFrameWindow) {
+        activeFrameWindow = resolveLatestGitBookEmbedFrameWindow();
+      }
+
+      if (activeFrameWindow && event.source !== activeFrameWindow) {
         return;
       }
 
@@ -335,22 +338,12 @@ export function ScriptPreview({
       }
     };
 
-    const removeCloseBridge = addGitBookCloseBridgeListener(() => {
-      if (typeof window.GitBook === "function") {
-        window.GitBook("close");
-        window.GitBook("hide");
-      }
-      forceCloseGitBookScriptWidgetUI();
-      hideGitBookScriptFrameNodes();
-      onStatus("Script embed close event received. Widget hidden.", "info");
-    });
-
     window.addEventListener("message", onFrameMessage);
     void boot();
 
     return () => {
       cancelled = true;
-      removeCloseBridge();
+      activeFrameWindow = null;
       window.removeEventListener("message", onFrameMessage);
       cleanupGitBookScriptWidget();
     };

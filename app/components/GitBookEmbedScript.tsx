@@ -4,13 +4,7 @@ import { useEffect } from "react";
 
 const SITE_URL = "https://stage.docs.rodrcastro.dev";
 const CDN_SCRIPT_SRC = "https://cdn.jsdelivr.net/npm/@gitbook/embed@0.2.2/dist/script.js";
-
-declare global {
-  interface Window {
-    __gitBookCloseBridgeListeners?: Set<() => void>;
-    __gitBookCloseBridgeOriginalLog?: typeof console.log;
-  }
-}
+const FORCE_HIDDEN_ATTR = "data-gitbook-force-hidden";
 
 function resolveSiteScriptURL(siteURL: string): string {
   const url = new URL(siteURL);
@@ -27,42 +21,20 @@ function forceCloseGitBookScriptWidgetUI() {
   buttonEl?.classList.remove("open");
 }
 
-function addGitBookCloseBridgeListener(listener: () => void): () => void {
-  if (!window.__gitBookCloseBridgeListeners) {
-    window.__gitBookCloseBridgeListeners = new Set();
-  }
+function restoreGitBookScriptWidgetUI() {
+  const windowEl = document.getElementById("gitbook-widget-window");
+  const buttonEl = document.getElementById("gitbook-widget-button");
 
-  if (!window.__gitBookCloseBridgeOriginalLog) {
-    window.__gitBookCloseBridgeOriginalLog = console.log;
-    console.log = (...args: unknown[]) => {
-      window.__gitBookCloseBridgeOriginalLog?.(...args);
+  windowEl?.classList.remove("hidden");
+  windowEl?.style.removeProperty("display");
+  windowEl?.style.removeProperty("visibility");
+  windowEl?.style.removeProperty("pointer-events");
+  windowEl?.removeAttribute(FORCE_HIDDEN_ATTR);
 
-      const first = args[0];
-      const payload = args[1] as { type?: string } | undefined;
-      const isGitBookLog =
-        typeof first === "string" && first.includes("[gitbook:embed] received message");
-
-      if (isGitBookLog && payload?.type === "close") {
-        for (const cb of window.__gitBookCloseBridgeListeners || []) {
-          cb();
-        }
-      }
-    };
-  }
-
-  window.__gitBookCloseBridgeListeners.add(listener);
-
-  return () => {
-    window.__gitBookCloseBridgeListeners?.delete(listener);
-    if ((window.__gitBookCloseBridgeListeners?.size || 0) > 0) {
-      return;
-    }
-
-    if (window.__gitBookCloseBridgeOriginalLog) {
-      console.log = window.__gitBookCloseBridgeOriginalLog;
-      window.__gitBookCloseBridgeOriginalLog = undefined;
-    }
-  };
+  buttonEl?.style.removeProperty("display");
+  buttonEl?.style.removeProperty("visibility");
+  buttonEl?.style.removeProperty("pointer-events");
+  buttonEl?.removeAttribute(FORCE_HIDDEN_ATTR);
 }
 
 function getGitBookEmbedIframes(): HTMLIFrameElement[] {
@@ -72,12 +44,9 @@ function getGitBookEmbedIframes(): HTMLIFrameElement[] {
   });
 }
 
-function isMessageFromGitBookEmbedFrame(event: MessageEvent): boolean {
-  if (!event.source) {
-    return false;
-  }
-
-  return getGitBookEmbedIframes().some((frame) => frame.contentWindow === event.source);
+function resolveLatestGitBookEmbedFrameWindow(): Window | null {
+  const frames = getGitBookEmbedIframes();
+  return frames[frames.length - 1]?.contentWindow || null;
 }
 
 function resolveMessageType(data: unknown): string | undefined {
@@ -129,15 +98,27 @@ function hideGitBookScriptFrameNodes() {
   }
 
   nodesToHide.forEach((node) => {
+    node.setAttribute(FORCE_HIDDEN_ATTR, "1");
     node.style.setProperty("display", "none", "important");
     node.style.setProperty("visibility", "hidden", "important");
     node.style.setProperty("pointer-events", "none", "important");
   });
 }
 
+function restoreGitBookScriptFrameNodes() {
+  const hiddenNodes = Array.from(document.querySelectorAll<HTMLElement>(`[${FORCE_HIDDEN_ATTR}="1"]`));
+  hiddenNodes.forEach((node) => {
+    node.style.removeProperty("display");
+    node.style.removeProperty("visibility");
+    node.style.removeProperty("pointer-events");
+    node.removeAttribute(FORCE_HIDDEN_ATTR);
+  });
+}
+
 export default function GitBookEmbedScript() {
   useEffect(() => {
     let isDisposed = false;
+    let activeFrameWindow: Window | null = null;
     const scriptSources = [resolveSiteScriptURL(SITE_URL), CDN_SCRIPT_SRC];
     let scriptElement: HTMLScriptElement | null = null;
 
@@ -146,13 +127,30 @@ export default function GitBookEmbedScript() {
         return;
       }
 
+      restoreGitBookScriptFrameNodes();
+      restoreGitBookScriptWidgetUI();
       window.GitBook("init", { siteURL: SITE_URL });
       window.GitBook("configure", { closeButton: true });
       window.GitBook("show");
+      window.GitBook("open");
+
+      window.setTimeout(() => {
+        activeFrameWindow = resolveLatestGitBookEmbedFrameWindow();
+        restoreGitBookScriptFrameNodes();
+        restoreGitBookScriptWidgetUI();
+      }, 0);
     };
 
     const onFrameMessage = (event: MessageEvent) => {
-      if (!isMessageFromGitBookEmbedFrame(event)) {
+      if (!event.source) {
+        return;
+      }
+
+      if (!activeFrameWindow) {
+        activeFrameWindow = resolveLatestGitBookEmbedFrameWindow();
+      }
+
+      if (activeFrameWindow && event.source !== activeFrameWindow) {
         return;
       }
 
@@ -200,21 +198,12 @@ export default function GitBookEmbedScript() {
       }
     };
 
-    const removeCloseBridge = addGitBookCloseBridgeListener(() => {
-      if (window.GitBook) {
-        window.GitBook("close");
-        window.GitBook("hide");
-      }
-      forceCloseGitBookScriptWidgetUI();
-      hideGitBookScriptFrameNodes();
-    });
-
     window.addEventListener("message", onFrameMessage);
     void boot();
 
     return () => {
       isDisposed = true;
-      removeCloseBridge();
+      activeFrameWindow = null;
       window.removeEventListener("message", onFrameMessage);
 
       if (scriptElement) {

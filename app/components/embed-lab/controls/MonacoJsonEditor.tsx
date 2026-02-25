@@ -108,6 +108,7 @@ export function MonacoJsonEditor({ value, onChange }: MonacoJsonEditorProps) {
         const editor = monaco.editor.create(containerRef.current, {
           model,
           language: "json",
+          theme: "vs-dark",
           automaticLayout: true,
           minimap: { enabled: false },
           scrollBeyondLastLine: false,
@@ -129,6 +130,7 @@ export function MonacoJsonEditor({ value, onChange }: MonacoJsonEditorProps) {
         });
 
         editorRef.current = editor;
+        monaco.editor.setTheme("vs-dark");
         setIsReady(true);
       } catch (error) {
         console.error("Monaco failed to initialize.", error);
