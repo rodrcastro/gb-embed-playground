@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { GITBOOK_SCRIPT_URL } from "../defaults";
 import { ScriptOnlyConfiguration, SharedConfiguration } from "../types";
 import { resolveVisitorJWTToken } from "../utils";
 
@@ -200,14 +201,13 @@ export function buildScriptSnippet(
   mode: "assistant" | "docs",
 ) {
   const normalizedConfiguration = normalizeSharedConfiguration(sharedConfiguration);
-  const normalizedSiteURL = siteURL.endsWith("/") ? siteURL.slice(0, -1) : siteURL;
   const unsignedClaimsJson = sharedConfiguration.visitor.unsignedClaimsJson?.trim();
   const unsignedClaimsExpression = unsignedClaimsJson
     ? `JSON.parse(${JSON.stringify(unsignedClaimsJson)})`
     : "undefined";
   const jwtToken = resolveVisitorJWTToken(sharedConfiguration.visitor) || "";
 
-  return `<script async src="${normalizedSiteURL}/~gitbook/embed/script.js"></script>
+  return `<script async src="${GITBOOK_SCRIPT_URL}"></script>
 <script>
   const jwtToken = ${JSON.stringify(jwtToken)}.trim();
   const unsignedClaims = ${unsignedClaimsExpression};

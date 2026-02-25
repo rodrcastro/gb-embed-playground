@@ -70,18 +70,6 @@ export function cleanupGitBookScriptWidget() {
   floatingEmbedNodes.forEach((node) => node.remove());
 }
 
-function resolveGitBookScriptURL(siteURL: string): string {
-  try {
-    const url = new URL(siteURL);
-    url.pathname = `${url.pathname.endsWith("/") ? url.pathname : `${url.pathname}/`}~gitbook/embed/script.js`;
-    url.search = "";
-    url.hash = "";
-    return url.toString();
-  } catch {
-    return GITBOOK_SCRIPT_URL;
-  }
-}
-
 export function ScriptPreview({
   siteURL,
   mode,
@@ -97,7 +85,7 @@ export function ScriptPreview({
 
   useEffect(() => {
     let cancelled = false;
-    const scriptURL = resolveGitBookScriptURL(siteURL);
+    const scriptURL = GITBOOK_SCRIPT_URL;
     const jwtToken = effectiveJWTToken;
     const unsignedClaims = configuration.visitor?.user?.unsignedClaims;
     const visitorOptions =

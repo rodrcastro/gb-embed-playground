@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 
 const SITE_URL = "https://stage.docs.rodrcastro.dev";
-const SCRIPT_SRC = `${SITE_URL}/~gitbook/embed/script.js`;
+const SCRIPT_SRC = "https://cdn.jsdelivr.net/npm/@gitbook/embed@0.2.2/dist/script.js";
 
 export default function GitBookEmbedScript() {
   useEffect(() => {
