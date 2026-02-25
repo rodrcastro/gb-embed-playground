@@ -20,7 +20,8 @@ declare global {
 }
 
 async function loadMonaco(): Promise<MonacoModule> {
-  return import("monaco-editor");
+  await import("monaco-editor/esm/vs/language/json/monaco.contribution");
+  return import("monaco-editor/esm/vs/editor/editor.api");
 }
 
 function configureJsonDiagnostics(monaco: MonacoModule) {
