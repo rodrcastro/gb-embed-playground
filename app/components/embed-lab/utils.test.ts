@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { PlaygroundState } from "./types";
 import {
+  normalizeRootCssDeclarations,
   resolveVisitorAuthMode,
   resolveVisitorJWTToken,
   sanitizeState,
+  validateRootCssOverrides,
   withJWTTokenQueryParameter,
 } from "./utils";
 
@@ -62,5 +64,52 @@ describe("embed utils", () => {
     expect(sanitized.sharedConfiguration.visitor.authMode).toBe("manual-jwt");
     expect(sanitized.sharedConfiguration.visitor.jwt_token).toBe("legacy-token");
     expect(sanitized.sharedConfiguration.visitor.token).toBeUndefined();
+    expect(sanitized.rootCssOverrides).toBe("");
+  });
+
+  it("accepts valid gitbook root CSS overrides", () => {
+    const validation = validateRootCssOverrides(
+      "background-solid: #111;\n\ntext-color: rgba(255, 255, 255, 0.9);",
+    );
+    expect(validation.valid).toBe(true);
+  });
+
+  it("rejects root CSS overrides without semicolon", () => {
+    const validation = validateRootCssOverrides("window-height: 30px");
+    expect(validation.valid).toBe(false);
+    expect(validation.message).toContain("must end with ';'");
+  });
+
+  it("rejects non-gitbook custom properties in root CSS overrides", () => {
+    const validation = validateRootCssOverrides("--background: #111;");
+    expect(validation.valid).toBe(false);
+    expect(validation.message).toContain("not an editable GitBook widget property");
+  });
+
+  it("rejects selectors and braces in root CSS overrides", () => {
+    const validation = validateRootCssOverrides(":root { --gitbook-widget-background-solid: #111; }");
+    expect(validation.valid).toBe(false);
+    expect(validation.message).toContain("selectors and braces");
+  });
+
+  it("normalizes root CSS declarations by trimming and removing blank lines", () => {
+    const normalized = normalizeRootCssDeclarations(
+      "\n  background-solid: #111;  \n\ntext-color: #fff;\n",
+    );
+    expect(normalized).toEqual([
+      "--gitbook-widget-background-solid: #111;",
+      "--gitbook-widget-text-color: #fff;",
+    ]);
+  });
+
+  it("rejects unknown gitbook-widget properties that are not editable", () => {
+    const validation = validateRootCssOverrides("--gitbook-widget-primary: #111;");
+    expect(validation.valid).toBe(false);
+    expect(validation.message).toContain("not an editable GitBook widget property");
+  });
+
+  it("accepts full property names for backward compatibility", () => {
+    const validation = validateRootCssOverrides("--gitbook-widget-window-height: 30px;");
+    expect(validation.valid).toBe(true);
   });
 });

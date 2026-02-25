@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { GITBOOK_SCRIPT_URL } from "../defaults";
 import { ScriptOnlyConfiguration, SharedConfiguration } from "../types";
-import { resolveVisitorJWTToken } from "../utils";
+import { normalizeRootCssDeclarations, resolveVisitorJWTToken } from "../utils";
 
 interface CodeSnippetsProps {
   siteURL: string;
   mode: "assistant" | "docs";
+  rootCssOverrides: string;
   sharedConfiguration: SharedConfiguration;
   scriptOnlyConfiguration: ScriptOnlyConfiguration;
 }
@@ -35,6 +36,15 @@ function normalizeSharedConfiguration(sharedConfiguration: SharedConfiguration) 
     ...sharedConfiguration,
     visitor,
   };
+}
+
+function buildRootCssBlock(rootCssOverrides: string): string {
+  const declarations = normalizeRootCssDeclarations(rootCssOverrides);
+  if (declarations.length === 0) {
+    return "";
+  }
+
+  return [":root {", ...declarations.map((declaration) => `  ${declaration}`), "}"].join("\n");
 }
 
 async function getShikiHighlighter() {
@@ -199,8 +209,11 @@ export function buildScriptSnippet(
   sharedConfiguration: SharedConfiguration,
   scriptOnlyConfiguration: ScriptOnlyConfiguration,
   mode: "assistant" | "docs",
+  rootCssOverrides: string,
 ) {
   const normalizedConfiguration = normalizeSharedConfiguration(sharedConfiguration);
+  const rootCssBlock = buildRootCssBlock(rootCssOverrides);
+  const stylePrefix = rootCssBlock ? `<style>\n${rootCssBlock}\n</style>\n\n` : "";
   const siteScriptURL = (() => {
     try {
       const url = new URL(siteURL);
@@ -218,7 +231,7 @@ export function buildScriptSnippet(
     : "undefined";
   const jwtToken = resolveVisitorJWTToken(sharedConfiguration.visitor) || "";
 
-  return `<script>
+  return `${stylePrefix}<script>
   const loadScript = (src) =>
     new Promise((resolve, reject) => {
       const script = document.createElement("script");
@@ -275,12 +288,19 @@ export function buildScriptSnippet(
 export function CodeSnippets({
   siteURL,
   mode,
+  rootCssOverrides,
   sharedConfiguration,
   scriptOnlyConfiguration,
 }: CodeSnippetsProps) {
   const reactSnippet = buildReactSnippet(siteURL, sharedConfiguration, mode);
   const npmSnippet = buildNpmSnippet(siteURL, sharedConfiguration, mode);
-  const scriptSnippet = buildScriptSnippet(siteURL, sharedConfiguration, scriptOnlyConfiguration, mode);
+  const scriptSnippet = buildScriptSnippet(
+    siteURL,
+    sharedConfiguration,
+    scriptOnlyConfiguration,
+    mode,
+    rootCssOverrides,
+  );
 
   return (
     <div className="lab-code-stack">
