@@ -412,6 +412,31 @@ iframe.gitbook-embed-light-surface,
   font-size: 0.74rem;
 }
 
+.lab-monaco-shell {
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(3, 3, 8, 0.35);
+}
+
+.lab-monaco-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(3, 3, 8, 0.72);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.lab-monaco-editor {
+  min-height: 340px;
+  height: 460px;
+}
+
 .lab-check-row {
   display: flex;
   align-items: center;

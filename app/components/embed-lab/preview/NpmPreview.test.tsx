@@ -43,6 +43,17 @@ function createSharedConfiguration(): SharedConfiguration {
   };
 }
 
+async function waitFor(check: () => boolean, timeoutMs = 1600): Promise<void> {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    if (check()) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  throw new Error("Timed out waiting for expected state.");
+}
+
 describe("NpmPreview", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -98,7 +109,7 @@ describe("NpmPreview", () => {
     });
 
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      await waitFor(() => configureMock.mock.calls.length > 0);
     });
 
     expect(configureMock).toHaveBeenCalledTimes(1);
@@ -133,7 +144,7 @@ describe("NpmPreview", () => {
     });
 
     await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 400));
+      await waitFor(() => navigateToPageMock.mock.calls.length > 0);
     });
 
     expect(navigateToPageMock).toHaveBeenCalledWith("/");
