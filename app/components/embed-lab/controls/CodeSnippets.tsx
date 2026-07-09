@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { GITBOOK_SCRIPT_URL } from "../defaults";
 import { ScriptOnlyConfiguration, SharedConfiguration } from "../types";
-import { normalizeRootCssDeclarations, resolveVisitorJWTToken } from "../utils";
+import { normalizeRootCssDeclarations, resolveColorScheme, resolveVisitorJWTToken } from "../utils";
 
 interface CodeSnippetsProps {
   siteURL: string;
@@ -184,7 +184,9 @@ const jwtToken = (config.visitor.jwt_token || "").trim();
 const unsignedClaims = config.visitor.unsignedClaimsJson
   ? JSON.parse(config.visitor.unsignedClaimsJson)
   : undefined;
-const frameURL = new URL(client.getFrameURL({ visitor: { unsignedClaims } }));
+const frameURL = new URL(
+  client.getFrameURL({ colorScheme: config.colorScheme, visitor: { unsignedClaims } })
+);
 if (jwtToken) frameURL.searchParams.set("jwt_token", jwtToken);
 iframe.src = frameURL.toString();
 document.querySelector("#gitbook-target")?.append(iframe);
@@ -193,6 +195,8 @@ const frame = client.createFrame(iframe);
 frame.configure({
   tabs: config.tabs,
   closeButton: config.closeButton,
+  trademark: config.trademark,
+  assistantName: config.assistantName,
   actions: config.actions,
   greeting: config.greeting,
   suggestions: config.suggestions,
@@ -230,6 +234,7 @@ export function buildScriptSnippet(
     ? `JSON.parse(${JSON.stringify(unsignedClaimsJson)})`
     : "undefined";
   const jwtToken = resolveVisitorJWTToken(sharedConfiguration.visitor) || "";
+  const colorScheme = resolveColorScheme(sharedConfiguration.colorScheme);
 
   return `${stylePrefix}<script>
   const loadScript = (src) =>
@@ -260,12 +265,18 @@ export function buildScriptSnippet(
 
     const jwtToken = ${JSON.stringify(jwtToken)}.trim();
     const unsignedClaims = ${unsignedClaimsExpression};
+    const colorScheme = ${colorScheme ? JSON.stringify(colorScheme) : "undefined"};
+    const frameOptions = {};
+    if (jwtToken || unsignedClaims) {
+      frameOptions.visitor = { jwt_token: jwtToken || undefined, unsignedClaims };
+    }
+    if (colorScheme) {
+      frameOptions.colorScheme = colorScheme;
+    }
     window.GitBook(
       "init",
       { siteURL: "${siteURL}" },
-      jwtToken || unsignedClaims
-        ? { visitor: { jwt_token: jwtToken || undefined, unsignedClaims } }
-        : undefined
+      Object.keys(frameOptions).length ? frameOptions : undefined
     );
     window.GitBook("configure", {
       ...${toJson(normalizedConfiguration)},

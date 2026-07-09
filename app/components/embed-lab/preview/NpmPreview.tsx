@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef } from "react";
-import { SharedConfiguration } from "../types";
+import { EmbedRuntimeControls, SharedConfiguration } from "../types";
 import { buildSharedConfiguration, withJWTTokenQueryParameter } from "../utils";
 
 interface NpmPreviewProps {
@@ -10,6 +10,7 @@ interface NpmPreviewProps {
   sharedConfiguration: SharedConfiguration;
   effectiveJWTToken?: string;
   onStatus: (message: string, level?: "info" | "success" | "error") => void;
+  onControlsReady?: (controls: EmbedRuntimeControls | null) => void;
 }
 
 interface GitBookRuntime {
@@ -21,6 +22,7 @@ interface GitBookRuntime {
 
 interface GitBookClientRuntime {
   getFrameURL: (options: {
+    colorScheme?: "light" | "dark";
     visitor?: {
       unsignedClaims?: Record<string, unknown>;
     };
@@ -34,6 +36,7 @@ export function NpmPreview({
   sharedConfiguration,
   effectiveJWTToken,
   onStatus,
+  onControlsReady,
 }: NpmPreviewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const configuration = useMemo(() => buildSharedConfiguration(sharedConfiguration), [sharedConfiguration]);
@@ -66,6 +69,7 @@ export function NpmPreview({
         ).createGitBook;
         const gitbookClient = createGitBook({ siteURL });
         const frameURL = gitbookClient.getFrameURL({
+          colorScheme: configuration.colorScheme,
           visitor: {
             unsignedClaims: configuration.visitor.user?.unsignedClaims,
           },
@@ -77,6 +81,8 @@ export function NpmPreview({
         gitbook.configure({
           tabs: configuration.tabs,
           closeButton: configuration.closeButton,
+          trademark: configuration.trademark,
+          ...(configuration.assistantName ? { assistantName: configuration.assistantName } : {}),
           actions: configuration.actions,
           greeting: configuration.greeting,
           suggestions: configuration.suggestions,
@@ -94,9 +100,16 @@ export function NpmPreview({
           gitbook.navigateToPage?.("/");
         }
 
+        onControlsReady?.({
+          toggle: () => {
+            iframe.style.display = iframe.style.display === "none" ? "" : "none";
+          },
+        });
+
         onStatus("NPM embed applied.", "success");
         cleanup = () => {
           unsubscribeClose?.();
+          onControlsReady?.(null);
           iframe.remove();
         };
       } catch (error) {
@@ -110,7 +123,7 @@ export function NpmPreview({
       window.clearTimeout(timer);
       cleanup?.();
     };
-  }, [siteURL, configuration, mode, onStatus, effectiveJWTToken]);
+  }, [siteURL, configuration, mode, onStatus, effectiveJWTToken, onControlsReady]);
 
   return <div ref={containerRef} className="gitbook-embed gitbook-embed-light-surface" />;
 }

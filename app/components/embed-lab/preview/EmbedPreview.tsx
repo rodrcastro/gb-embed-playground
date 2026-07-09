@@ -2,7 +2,12 @@
 
 import { useState } from "react";
 import { useProviderAuthBootstrap } from "../auth/useProviderAuthBootstrap";
-import { EmbedImplementation, ScriptOnlyConfiguration, SharedConfiguration } from "../types";
+import {
+  EmbedImplementation,
+  EmbedRuntimeControls,
+  ScriptOnlyConfiguration,
+  SharedConfiguration,
+} from "../types";
 import { resolveVisitorAuthMode } from "../utils";
 import { NpmPreview } from "./NpmPreview";
 import { ReactPreview } from "./ReactPreview";
@@ -15,6 +20,7 @@ interface EmbedPreviewProps {
   sharedConfiguration: SharedConfiguration;
   scriptOnlyConfiguration: ScriptOnlyConfiguration;
   onStatus: (message: string, level?: "info" | "success" | "error") => void;
+  onControlsReady?: (controls: EmbedRuntimeControls | null) => void;
 }
 
 export function EmbedPreview({
@@ -24,6 +30,7 @@ export function EmbedPreview({
   sharedConfiguration,
   scriptOnlyConfiguration,
   onStatus,
+  onControlsReady,
 }: EmbedPreviewProps) {
   const [manualRefreshRevision, setManualRefreshRevision] = useState(0);
   const authMode = resolveVisitorAuthMode(sharedConfiguration.visitor);
@@ -74,6 +81,7 @@ export function EmbedPreview({
         effectiveJWTToken={effectiveJWTToken}
         className="gitbook-embed"
         onStatus={onStatus}
+        onControlsReady={onControlsReady}
       />
     );
   } else if (implementation === "npm") {
@@ -85,6 +93,7 @@ export function EmbedPreview({
         sharedConfiguration={sharedConfiguration}
         effectiveJWTToken={effectiveJWTToken}
         onStatus={onStatus}
+        onControlsReady={onControlsReady}
       />
     );
   } else {
@@ -97,6 +106,7 @@ export function EmbedPreview({
         scriptOnlyConfiguration={scriptOnlyConfiguration}
         effectiveJWTToken={effectiveJWTToken}
         onStatus={onStatus}
+        onControlsReady={onControlsReady}
       />
     );
   }

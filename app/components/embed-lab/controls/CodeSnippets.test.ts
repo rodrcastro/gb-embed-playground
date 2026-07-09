@@ -5,8 +5,11 @@ import { ScriptOnlyConfiguration, SharedConfiguration } from "../types";
 
 function createSharedConfiguration(): SharedConfiguration {
   return {
-    tabs: ["assistant", "docs"],
+    tabs: ["assistant", "docs", "search"],
     closeButton: true,
+    trademark: false,
+    assistantName: "Nova",
+    colorScheme: "dark",
     actions: [],
     greeting: {
       title: "Hello",
@@ -22,17 +25,20 @@ function createSharedConfiguration(): SharedConfiguration {
 }
 
 describe("CodeSnippets", () => {
-  it("includes closeButton in the NPM snippet", () => {
+  it("includes closeButton, trademark and assistantName in the NPM snippet", () => {
     const snippet = buildNpmSnippet("https://docs.example.com", createSharedConfiguration(), "assistant");
 
     expect(snippet).toContain("closeButton: config.closeButton");
+    expect(snippet).toContain("trademark: config.trademark");
+    expect(snippet).toContain("assistantName: config.assistantName");
+    expect(snippet).toContain("colorScheme: config.colorScheme");
     expect(snippet).not.toContain(":root {");
   });
 
-  it("uses fallback script sources and includes closeButton in script snippet", () => {
+  it("uses fallback script sources and includes new config in script snippet", () => {
     const scriptOnlyConfiguration: ScriptOnlyConfiguration = {
       button: {
-        icon: "sparkles",
+        icon: "sparkle",
       },
     };
 
@@ -47,6 +53,8 @@ describe("CodeSnippets", () => {
     expect(snippet).toContain(GITBOOK_SCRIPT_URL);
     expect(snippet).toContain("~gitbook/embed/script.js");
     expect(snippet).toContain('"closeButton": true');
+    expect(snippet).toContain('"search"');
+    expect(snippet).toContain('const colorScheme = "dark";');
     expect(snippet).toContain("<style>");
     expect(snippet).toContain("--gitbook-widget-window-height: 30px;");
   });

@@ -6,8 +6,11 @@ export const DEFAULT_PLAYGROUND_STATE: PlaygroundState = {
   mode: "assistant",
   rootCssOverrides: "",
   sharedConfiguration: {
-    tabs: ["assistant", "docs"],
+    tabs: ["assistant", "docs", "search"],
     closeButton: true,
+    trademark: true,
+    assistantName: "Nebula Assistant",
+    colorScheme: undefined,
     actions: [
       {
         id: "a1",
@@ -34,6 +37,8 @@ export const DEFAULT_PLAYGROUND_STATE: PlaygroundState = {
         inputSchemaJson:
           '{"type":"object","properties":{"releaseId":{"type":"string"}},"required":["releaseId"]}',
         response: '{"status":"healthy","eta":"2h"}',
+        confirmationLabel: "Check release status",
+        confirmationIcon: "rocket",
       },
     ],
     visitor: {
@@ -45,7 +50,7 @@ export const DEFAULT_PLAYGROUND_STATE: PlaygroundState = {
   },
   scriptOnlyConfiguration: {
     button: {
-      icon: "sparkles",
+      icon: "sparkle",
       label: "Help",
       className: "bg-white text-black",
     },
@@ -56,7 +61,7 @@ export const DEFAULT_PLAYGROUND_STATE: PlaygroundState = {
   },
 };
 
-export const GITBOOK_SCRIPT_URL = "https://cdn.jsdelivr.net/npm/@gitbook/embed@0.2.2/dist/script.js";
+export const GITBOOK_SCRIPT_URL = "https://cdn.jsdelivr.net/npm/@gitbook/embed@0.5.1/dist/script.js";
 
 export const URL_STATE_PARAM = "gb";
 export const LOCAL_STORAGE_KEY = "gitbook-embed-lab-state";

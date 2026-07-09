@@ -1,6 +1,8 @@
 export type EmbedImplementation = "react" | "npm" | "script";
 
 export type EmbedMode = "assistant" | "docs";
+export type EmbedTab = "assistant" | "docs" | "search";
+export type EmbedColorScheme = "light" | "dark";
 export type VisitorAuthMode = "manual-jwt" | "provider-integration";
 
 export interface GreetingConfig {
@@ -22,6 +24,8 @@ export interface ToolConfig {
   description?: string;
   inputSchemaJson?: string;
   response?: string;
+  confirmationLabel?: string;
+  confirmationIcon?: string;
 }
 
 export interface VisitorConfig {
@@ -35,8 +39,11 @@ export interface VisitorConfig {
 }
 
 export interface SharedConfiguration {
-  tabs: Array<"assistant" | "docs">;
+  tabs: EmbedTab[];
   closeButton: boolean;
+  trademark?: boolean;
+  assistantName?: string;
+  colorScheme?: EmbedColorScheme;
   actions: ActionConfig[];
   greeting: GreetingConfig;
   suggestions: string[];
@@ -44,8 +51,10 @@ export interface SharedConfiguration {
   visitor: VisitorConfig;
 }
 
+export type ScriptButtonIcon = "assistant" | "sparkle" | "help" | "book";
+
 export interface ScriptButtonConfiguration {
-  icon?: "question" | "sparkles";
+  icon?: ScriptButtonIcon;
   label?: string;
   className?: string;
 }
@@ -72,6 +81,10 @@ export interface ScriptConfig {
   siteURL: string;
   mode: EmbedMode;
   configuration: SharedConfiguration & ScriptOnlyConfiguration;
+}
+
+export interface EmbedRuntimeControls {
+  toggle: () => void;
 }
 
 export interface PlaygroundUIState {

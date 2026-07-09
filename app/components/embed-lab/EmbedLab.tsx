@@ -15,7 +15,7 @@ import {
   writeStateToLocalStorage,
   writeStateToUrl,
 } from "./state/persistence";
-import { EmbedLabStatus, PlaygroundState } from "./types";
+import { EmbedLabStatus, EmbedRuntimeControls, PlaygroundState } from "./types";
 import {
   formatConfigurationJson,
   normalizeRootCssDeclarations,
@@ -45,6 +45,7 @@ export default function EmbedLab() {
   const [draftState, setDraftState] = useState<PlaygroundState>(() => resolveInitialState());
   const [appliedState, setAppliedState] = useState<PlaygroundState>(() => resolveInitialState());
   const [previewRevision, setPreviewRevision] = useState(0);
+  const [embedControls, setEmbedControls] = useState<EmbedRuntimeControls | null>(null);
   const [rawConfiguration, setRawConfiguration] = useState(() => {
     const initialState = resolveInitialState();
     return formatConfigurationJson(
@@ -302,6 +303,21 @@ export default function EmbedLab() {
             }
           />
         </div>
+        <div>
+          <p className="lab-label">Visibility</p>
+          <button
+            type="button"
+            className="lab-button ghost"
+            onClick={() => {
+              embedControls?.toggle();
+              updateStatus("Toggled embed visibility.", "info");
+            }}
+            disabled={!embedControls}
+            title="Show or hide the live embed"
+          >
+            Toggle embed
+          </button>
+        </div>
       </div>
 
       <div className={`lab-status ${visibleStatus.level}`}>
@@ -360,6 +376,7 @@ export default function EmbedLab() {
             sharedConfiguration={appliedState.sharedConfiguration}
             scriptOnlyConfiguration={appliedState.scriptOnlyConfiguration}
             onStatus={updateStatus}
+            onControlsReady={setEmbedControls}
           />
         </div>
       </div>
