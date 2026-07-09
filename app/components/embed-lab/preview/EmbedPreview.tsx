@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { useProviderAuthBootstrap } from "../auth/useProviderAuthBootstrap";
 import {
   EmbedImplementation,
@@ -20,6 +20,7 @@ interface EmbedPreviewProps {
   sharedConfiguration: SharedConfiguration;
   scriptOnlyConfiguration: ScriptOnlyConfiguration;
   onStatus: (message: string, level?: "info" | "success" | "error") => void;
+  onControlsReady?: (controls: EmbedRuntimeControls | null) => void;
 }
 
 export function EmbedPreview({
@@ -29,13 +30,9 @@ export function EmbedPreview({
   sharedConfiguration,
   scriptOnlyConfiguration,
   onStatus,
+  onControlsReady,
 }: EmbedPreviewProps) {
   const [manualRefreshRevision, setManualRefreshRevision] = useState(0);
-  const [controls, setControls] = useState<EmbedRuntimeControls | null>(null);
-  const [runtimeMessage, setRuntimeMessage] = useState("How do I get started?");
-  const onControlsReady = useCallback((next: EmbedRuntimeControls | null) => {
-    setControls(next);
-  }, []);
   const authMode = resolveVisitorAuthMode(sharedConfiguration.visitor);
   const isProviderMode = authMode === "provider-integration";
   const {
@@ -114,16 +111,6 @@ export function EmbedPreview({
     );
   }
 
-  const controlsAvailable = controls !== null;
-  const sendRuntimeMessage = () => {
-    const message = runtimeMessage.trim();
-    if (!message || !controls) {
-      return;
-    }
-    controls.postUserMessage(message);
-    onStatus(`Sent message to assistant: "${message}"`, "info");
-  };
-
   return (
     <div className="lab-panel stack-tight">
       {isProviderMode ? (
@@ -141,60 +128,6 @@ export function EmbedPreview({
         </div>
       ) : null}
       {preview}
-      <div className="lab-panel stack-tight">
-        <p className="lab-panel-title no-margin">Programmatic controls</p>
-        <p className="lab-status-meta">
-          {controlsAvailable
-            ? "Drive the live embed through the runtime API."
-            : "Waiting for the embed to initialize…"}
-        </p>
-        <div className="lab-row">
-          <input
-            className="lab-input"
-            value={runtimeMessage}
-            onChange={(event) => setRuntimeMessage(event.target.value)}
-            placeholder="Message to post to the assistant"
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                event.preventDefault();
-                sendRuntimeMessage();
-              }
-            }}
-          />
-          <button
-            type="button"
-            className="lab-button"
-            onClick={sendRuntimeMessage}
-            disabled={!controlsAvailable || runtimeMessage.trim().length === 0}
-          >
-            postUserMessage
-          </button>
-        </div>
-        <div className="lab-row">
-          <button
-            type="button"
-            className="lab-button ghost"
-            onClick={() => {
-              controls?.clearChat();
-              onStatus("Cleared assistant chat.", "info");
-            }}
-            disabled={!controlsAvailable}
-          >
-            clearChat
-          </button>
-          <button
-            type="button"
-            className="lab-button ghost"
-            onClick={() => {
-              controls?.toggle();
-              onStatus("Toggled embed visibility.", "info");
-            }}
-            disabled={!controlsAvailable}
-          >
-            toggle
-          </button>
-        </div>
-      </div>
     </div>
   );
 }

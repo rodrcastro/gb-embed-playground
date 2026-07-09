@@ -17,8 +17,6 @@ interface GitBookRuntime {
   configure: (config: Record<string, unknown>) => void;
   navigateToPage?: (path: string) => void;
   navigateToAssistant?: () => void;
-  postUserMessage?: (message: string) => void;
-  clearChat?: () => void;
   on?: (event: string, listener: () => void) => () => void;
 }
 
@@ -103,8 +101,6 @@ export function NpmPreview({
         }
 
         onControlsReady?.({
-          postUserMessage: (message: string) => gitbook.postUserMessage?.(message),
-          clearChat: () => gitbook.clearChat?.(),
           toggle: () => {
             iframe.style.display = iframe.style.display === "none" ? "" : "none";
           },

@@ -84,8 +84,6 @@ export interface ScriptConfig {
 }
 
 export interface EmbedRuntimeControls {
-  postUserMessage: (message: string) => void;
-  clearChat: () => void;
   toggle: () => void;
 }
 

@@ -101,8 +101,6 @@ function ReactPreviewFrame({
     }
 
     onControlsReady({
-      postUserMessage: (message: string) => frame.postUserMessage(message),
-      clearChat: () => frame.clearChat(),
       toggle: () => {
         const iframe = iframeRef.current;
         if (!iframe) {

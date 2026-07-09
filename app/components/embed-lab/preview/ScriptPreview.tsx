@@ -295,8 +295,6 @@ export function ScriptPreview({
       }, 0);
 
       onControlsReady?.({
-        postUserMessage: (message: string) => window.GitBook?.("postUserMessage", message),
-        clearChat: () => window.GitBook?.("clearChat"),
         toggle: () => window.GitBook?.("toggle"),
       });
 
