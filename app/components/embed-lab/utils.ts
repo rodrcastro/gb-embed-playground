@@ -1,6 +1,9 @@
 import {
   ActionConfig,
+  EmbedColorScheme,
+  EmbedTab,
   PlaygroundState,
+  ScriptButtonIcon,
   ScriptOnlyConfiguration,
   SharedConfiguration,
   ToolConfig,
@@ -8,6 +11,11 @@ import {
   VisitorAuthMode,
   VisitorConfig,
 } from "./types";
+
+export const ASSISTANT_NAME_MAX_LENGTH = 32;
+export const SCRIPT_BUTTON_ICONS: ScriptButtonIcon[] = ["assistant", "sparkle", "help", "book"];
+export const EMBED_TABS: EmbedTab[] = ["assistant", "docs", "search"];
+export const EMBED_COLOR_SCHEMES: EmbedColorScheme[] = ["light", "dark"];
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -122,14 +130,39 @@ export function buildTools(tools: ToolConfig[]) {
     .map((tool) => {
       const schema = parseToolInputSchema(tool);
       const response = tool.response || `{"tool":"${tool.name}","ok":true}`;
+      const confirmationLabel = tool.confirmationLabel?.trim();
+      const confirmationIcon = tool.confirmationIcon?.trim();
 
       return {
         name: tool.name,
         description: tool.description,
         input: schema,
+        ...(confirmationLabel
+          ? {
+              confirmation: {
+                label: confirmationLabel,
+                ...(confirmationIcon ? { icon: confirmationIcon } : {}),
+              },
+            }
+          : {}),
         execute: async () => response,
       };
     });
+}
+
+export function resolveColorScheme(
+  colorScheme: EmbedColorScheme | undefined,
+): EmbedColorScheme | undefined {
+  return colorScheme === "light" || colorScheme === "dark" ? colorScheme : undefined;
+}
+
+export function resolveAssistantName(assistantName: string | undefined): string | undefined {
+  const trimmed = assistantName?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  return trimmed.slice(0, ASSISTANT_NAME_MAX_LENGTH);
 }
 
 export function buildVisitor(visitor: VisitorConfig) {
@@ -149,9 +182,15 @@ export function buildVisitor(visitor: VisitorConfig) {
 }
 
 export function buildSharedConfiguration(sharedConfiguration: SharedConfiguration) {
+  const assistantName = resolveAssistantName(sharedConfiguration.assistantName);
+  const colorScheme = resolveColorScheme(sharedConfiguration.colorScheme);
+
   return {
     tabs: sharedConfiguration.tabs,
     closeButton: sharedConfiguration.closeButton,
+    trademark: sharedConfiguration.trademark ?? true,
+    assistantName,
+    colorScheme,
     actions: buildActions(sharedConfiguration.actions),
     greeting: sharedConfiguration.greeting,
     suggestions: sharedConfiguration.suggestions.filter((value) => value.trim().length > 0),
@@ -178,12 +217,40 @@ export function validateConfiguration(
     return { valid: false, message: "tabs must contain at least one tab." };
   }
 
+  if (sharedConfiguration.tabs.some((tab) => !EMBED_TABS.includes(tab))) {
+    return { valid: false, message: `tabs may only contain ${EMBED_TABS.join(", ")}.` };
+  }
+
   if (!Array.isArray(sharedConfiguration.suggestions)) {
     return { valid: false, message: "suggestions must be an array." };
   }
 
   if (typeof sharedConfiguration.closeButton !== "boolean") {
     return { valid: false, message: "closeButton must be a boolean." };
+  }
+
+  if (
+    typeof sharedConfiguration.trademark !== "undefined" &&
+    typeof sharedConfiguration.trademark !== "boolean"
+  ) {
+    return { valid: false, message: "trademark must be a boolean." };
+  }
+
+  if (
+    typeof sharedConfiguration.assistantName === "string" &&
+    sharedConfiguration.assistantName.trim().length > ASSISTANT_NAME_MAX_LENGTH
+  ) {
+    return {
+      valid: false,
+      message: `assistantName must be ${ASSISTANT_NAME_MAX_LENGTH} characters or fewer.`,
+    };
+  }
+
+  if (
+    typeof sharedConfiguration.colorScheme !== "undefined" &&
+    !EMBED_COLOR_SCHEMES.includes(sharedConfiguration.colorScheme)
+  ) {
+    return { valid: false, message: "colorScheme must be 'light' or 'dark'." };
   }
 
   for (const tool of sharedConfiguration.tools) {
@@ -232,9 +299,11 @@ export function validateConfiguration(
   }
 
   if (scriptOnlyConfiguration.button?.icon) {
-    const validIcons = ["question", "sparkles"];
-    if (!validIcons.includes(scriptOnlyConfiguration.button.icon)) {
-      return { valid: false, message: "script button icon must be 'question' or 'sparkles'." };
+    if (!SCRIPT_BUTTON_ICONS.includes(scriptOnlyConfiguration.button.icon)) {
+      return {
+        valid: false,
+        message: `script button icon must be one of ${SCRIPT_BUTTON_ICONS.join(", ")}.`,
+      };
     }
   }
 
@@ -301,9 +370,14 @@ export function sanitizeState(input: PlaygroundState): PlaygroundState {
     sharedConfiguration: {
       ...sharedConfiguration,
       tabs: Array.isArray(sharedConfiguration.tabs)
-        ? sharedConfiguration.tabs.filter((tab) => tab === "assistant" || tab === "docs")
+        ? sharedConfiguration.tabs.filter((tab) => EMBED_TABS.includes(tab))
         : ["assistant", "docs"],
       closeButton: typeof sharedConfiguration.closeButton === "boolean" ? sharedConfiguration.closeButton : false,
+      trademark:
+        typeof sharedConfiguration.trademark === "boolean" ? sharedConfiguration.trademark : true,
+      assistantName:
+        typeof sharedConfiguration.assistantName === "string" ? sharedConfiguration.assistantName : undefined,
+      colorScheme: resolveColorScheme(sharedConfiguration.colorScheme),
       actions: Array.isArray(sharedConfiguration.actions)
         ? sharedConfiguration.actions
         : [],

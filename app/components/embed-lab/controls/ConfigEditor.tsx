@@ -2,10 +2,13 @@
 
 import { useState } from "react";
 import {
+  EmbedTab,
+  ScriptButtonIcon,
   ScriptOnlyConfiguration,
   SharedConfiguration,
   ValidationResult,
 } from "../types";
+import { SCRIPT_BUTTON_ICONS } from "../utils";
 import { MonacoJsonEditor } from "./MonacoJsonEditor";
 
 interface ConfigEditorProps {
@@ -124,7 +127,7 @@ export function ConfigEditor({
     });
   };
 
-  const updateTabs = (tab: "assistant" | "docs", checked: boolean) => {
+  const updateTabs = (tab: EmbedTab, checked: boolean) => {
     const current = new Set(sharedConfiguration.tabs);
     if (checked) {
       current.add(tab);
@@ -132,7 +135,7 @@ export function ConfigEditor({
       current.delete(tab);
     }
 
-    const next = Array.from(current) as Array<"assistant" | "docs">;
+    const next = Array.from(current) as EmbedTab[];
     onSharedConfigurationChange({
       ...sharedConfiguration,
       tabs: next.length > 0 ? next : ["assistant"],
@@ -177,8 +180,48 @@ export function ConfigEditor({
                 />
                 Docs
               </label>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={sharedConfiguration.tabs.includes("search")}
+                  onChange={(event) => updateTabs("search", event.target.checked)}
+                />
+                Search
+              </label>
             </div>
           </div>
+          <label className="lab-field">
+            <span>assistantName</span>
+            <input
+              className="lab-input"
+              maxLength={32}
+              value={sharedConfiguration.assistantName || ""}
+              placeholder="Assistant"
+              onChange={(event) =>
+                onSharedConfigurationChange({
+                  ...sharedConfiguration,
+                  assistantName: event.target.value,
+                })
+              }
+            />
+          </label>
+          <label className="lab-field">
+            <span>colorScheme</span>
+            <select
+              className="lab-input"
+              value={sharedConfiguration.colorScheme || ""}
+              onChange={(event) =>
+                onSharedConfigurationChange({
+                  ...sharedConfiguration,
+                  colorScheme: (event.target.value || undefined) as "light" | "dark" | undefined,
+                })
+              }
+            >
+              <option value="">(auto)</option>
+              <option value="light">light</option>
+              <option value="dark">dark</option>
+            </select>
+          </label>
           <div className="lab-field">
             <span>closeButton</span>
             <label className="lab-check-row">
@@ -193,6 +236,22 @@ export function ConfigEditor({
                 }
               />
               Show close button
+            </label>
+          </div>
+          <div className="lab-field">
+            <span>trademark</span>
+            <label className="lab-check-row">
+              <input
+                type="checkbox"
+                checked={sharedConfiguration.trademark ?? true}
+                onChange={(event) =>
+                  onSharedConfigurationChange({
+                    ...sharedConfiguration,
+                    trademark: event.target.checked,
+                  })
+                }
+              />
+              Show GitBook branding
             </label>
           </div>
         </AccordionSection>
@@ -455,6 +514,38 @@ export function ConfigEditor({
                   }}
                 />
               </label>
+              <label className="lab-field">
+                <span>Confirmation label (optional)</span>
+                <input
+                  className="lab-input"
+                  value={tool.confirmationLabel || ""}
+                  placeholder="Ask before running this tool"
+                  onChange={(event) => {
+                    const nextTools = [...sharedConfiguration.tools];
+                    nextTools[index] = { ...tool, confirmationLabel: event.target.value };
+                    onSharedConfigurationChange({
+                      ...sharedConfiguration,
+                      tools: nextTools,
+                    });
+                  }}
+                />
+              </label>
+              <label className="lab-field">
+                <span>Confirmation icon (Font Awesome)</span>
+                <input
+                  className="lab-input"
+                  value={tool.confirmationIcon || ""}
+                  placeholder="circle-check"
+                  onChange={(event) => {
+                    const nextTools = [...sharedConfiguration.tools];
+                    nextTools[index] = { ...tool, confirmationIcon: event.target.value };
+                    onSharedConfigurationChange({
+                      ...sharedConfiguration,
+                      tools: nextTools,
+                    });
+                  }}
+                />
+              </label>
             </div>
           ))}
           <button
@@ -598,14 +689,17 @@ export function ConfigEditor({
                   ...scriptOnlyConfiguration,
                   button: {
                     ...scriptOnlyConfiguration.button,
-                    icon: (event.target.value || undefined) as "question" | "sparkles" | undefined,
+                    icon: (event.target.value || undefined) as ScriptButtonIcon | undefined,
                   },
                 })
               }
             >
               <option value="">(unset)</option>
-              <option value="question">question</option>
-              <option value="sparkles">sparkles</option>
+              {SCRIPT_BUTTON_ICONS.map((icon) => (
+                <option key={icon} value={icon}>
+                  {icon}
+                </option>
+              ))}
             </select>
           </label>
           <label className="lab-field">

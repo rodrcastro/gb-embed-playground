@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 
 const SITE_URL = "https://stage.docs.rodrcastro.dev";
-const CDN_SCRIPT_SRC = "https://cdn.jsdelivr.net/npm/@gitbook/embed@0.2.2/dist/script.js";
+const CDN_SCRIPT_SRC = "https://cdn.jsdelivr.net/npm/@gitbook/embed@0.5.1/dist/script.js";
 const FORCE_HIDDEN_ATTR = "data-gitbook-force-hidden";
 
 declare global {

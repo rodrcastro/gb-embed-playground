@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@gitbook/embed": "^0.2.0",
+    "@gitbook/embed": "^0.5.1",
     "monaco-editor": "^0.55.1",
     "next": "16.1.6",
     "react": "19.2.3",

@@ -2,7 +2,7 @@
 
 import { GitBookProvider, useGitBook } from "@gitbook/embed/react";
 import { memo, useEffect, useMemo, useRef } from "react";
-import { SharedConfiguration } from "../types";
+import { EmbedRuntimeControls, SharedConfiguration } from "../types";
 import { buildSharedConfiguration, withJWTTokenQueryParameter } from "../utils";
 
 type BuiltConfiguration = ReturnType<typeof buildSharedConfiguration>;
@@ -14,6 +14,7 @@ interface ReactPreviewProps {
   effectiveJWTToken?: string;
   className?: string;
   onStatus?: (message: string, level?: "info" | "success" | "error") => void;
+  onControlsReady?: (controls: EmbedRuntimeControls | null) => void;
 }
 
 interface ReactPreviewFrameProps {
@@ -22,6 +23,7 @@ interface ReactPreviewFrameProps {
   effectiveJWTToken?: string;
   className?: string;
   onStatus?: (message: string, level?: "info" | "success" | "error") => void;
+  onControlsReady?: (controls: EmbedRuntimeControls | null) => void;
 }
 
 function ReactPreviewFrame({
@@ -30,6 +32,7 @@ function ReactPreviewFrame({
   effectiveJWTToken,
   className,
   onStatus,
+  onControlsReady,
 }: ReactPreviewFrameProps) {
   const gitbook = useGitBook();
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -38,13 +41,14 @@ function ReactPreviewFrame({
   const frameURL = useMemo(
     () => {
       const url = gitbook.getFrameURL({
+        colorScheme: configuration.colorScheme,
         visitor: {
           unsignedClaims: configuration.visitor.user?.unsignedClaims,
         },
       });
       return withJWTTokenQueryParameter(url, effectiveJWTToken);
     },
-    [gitbook, effectiveJWTToken, configuration.visitor.user?.unsignedClaims],
+    [gitbook, effectiveJWTToken, configuration.colorScheme, configuration.visitor.user?.unsignedClaims],
   );
 
   useEffect(() => {
@@ -68,6 +72,8 @@ function ReactPreviewFrame({
     const settings = {
       tabs: configuration.tabs,
       closeButton: configuration.closeButton,
+      trademark: configuration.trademark,
+      ...(configuration.assistantName ? { assistantName: configuration.assistantName } : {}),
       actions: configuration.actions as never,
       greeting: {
         title: configuration.greeting?.title ?? "",
@@ -87,6 +93,27 @@ function ReactPreviewFrame({
 
     onStatus?.("React embed applied.", "success");
   }, [mode, configuration, onStatus]);
+
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame || !onControlsReady) {
+      return;
+    }
+
+    onControlsReady({
+      postUserMessage: (message: string) => frame.postUserMessage(message),
+      clearChat: () => frame.clearChat(),
+      toggle: () => {
+        const iframe = iframeRef.current;
+        if (!iframe) {
+          return;
+        }
+        iframe.style.display = iframe.style.display === "none" ? "" : "none";
+      },
+    });
+
+    return () => onControlsReady(null);
+  }, [onControlsReady, frameURL]);
 
   useEffect(() => {
     const frame = frameRef.current;
@@ -112,6 +139,7 @@ function ReactPreviewComponent({
   effectiveJWTToken,
   className,
   onStatus,
+  onControlsReady,
 }: ReactPreviewProps) {
   const configuration = useMemo(() => buildSharedConfiguration(sharedConfiguration), [sharedConfiguration]);
   const frameClassName = [className, "gitbook-embed-light-surface"].filter(Boolean).join(" ");
@@ -124,6 +152,7 @@ function ReactPreviewComponent({
         effectiveJWTToken={effectiveJWTToken}
         className={frameClassName}
         onStatus={onStatus}
+        onControlsReady={onControlsReady}
       />
     </GitBookProvider>
   );

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo } from "react";
 import { GITBOOK_SCRIPT_URL } from "../defaults";
-import { ScriptOnlyConfiguration, SharedConfiguration } from "../types";
+import { EmbedRuntimeControls, ScriptOnlyConfiguration, SharedConfiguration } from "../types";
 import { buildScriptConfiguration } from "../utils";
 
 interface ScriptPreviewProps {
@@ -12,6 +12,7 @@ interface ScriptPreviewProps {
   scriptOnlyConfiguration: ScriptOnlyConfiguration;
   effectiveJWTToken?: string;
   onStatus: (message: string, level?: "info" | "success" | "error") => void;
+  onControlsReady?: (controls: EmbedRuntimeControls | null) => void;
 }
 
 type GitBookCommand =
@@ -236,6 +237,7 @@ export function ScriptPreview({
   scriptOnlyConfiguration,
   effectiveJWTToken,
   onStatus,
+  onControlsReady,
 }: ScriptPreviewProps) {
   const configuration = useMemo(
     () => buildScriptConfiguration(sharedConfiguration, scriptOnlyConfiguration),
@@ -248,15 +250,15 @@ export function ScriptPreview({
     const scriptURLs = [resolveSiteScriptURL(siteURL), GITBOOK_SCRIPT_URL].filter(Boolean) as string[];
     const jwtToken = effectiveJWTToken;
     const unsignedClaims = configuration.visitor?.user?.unsignedClaims;
-    const visitorOptions =
-      jwtToken || unsignedClaims
-        ? {
-            visitor: {
-              jwt_token: jwtToken,
-              unsignedClaims,
-            },
-          }
-        : undefined;
+    const colorScheme = configuration.colorScheme;
+    const frameOptions: Record<string, unknown> = {};
+    if (jwtToken || unsignedClaims) {
+      frameOptions.visitor = { jwt_token: jwtToken, unsignedClaims };
+    }
+    if (colorScheme) {
+      frameOptions.colorScheme = colorScheme;
+    }
+    const visitorOptions = Object.keys(frameOptions).length > 0 ? frameOptions : undefined;
 
     const run = () => {
       if (cancelled) {
@@ -291,6 +293,12 @@ export function ScriptPreview({
         restoreGitBookScriptFrameNodes();
         restoreGitBookScriptWidgetUI();
       }, 0);
+
+      onControlsReady?.({
+        postUserMessage: (message: string) => window.GitBook?.("postUserMessage", message),
+        clearChat: () => window.GitBook?.("clearChat"),
+        toggle: () => window.GitBook?.("toggle"),
+      });
 
       onStatus("Script embed reloaded.", "success");
     };
@@ -399,8 +407,9 @@ export function ScriptPreview({
       removeCloseBridge();
       window.removeEventListener("message", onFrameMessage);
       cleanupGitBookScriptWidget();
+      onControlsReady?.(null);
     };
-  }, [siteURL, mode, configuration, onStatus, effectiveJWTToken]);
+  }, [siteURL, mode, configuration, onStatus, effectiveJWTToken, onControlsReady]);
 
   return <div className="gitbook-embed script-mode" />;
 }
