@@ -48,6 +48,228 @@ function parseToolInputSchema(tool: ToolConfig): Record<string, unknown> | undef
   };
 }
 
+export interface EditableRootCssPropertyReference {
+  property: string;
+  suffix: string;
+  defaultValue: string;
+  darkModeDefault?: string;
+}
+
+export const EDITABLE_ROOT_CSS_REFERENCE: EditableRootCssPropertyReference[] = [
+  {
+    property: "--gitbook-widget-top",
+    suffix: "top",
+    defaultValue: "1rem",
+  },
+  {
+    property: "--gitbook-widget-bottom",
+    suffix: "bottom",
+    defaultValue: "1rem",
+  },
+  {
+    property: "--gitbook-widget-right",
+    suffix: "right",
+    defaultValue: "1rem",
+  },
+  {
+    property: "--gitbook-widget-left",
+    suffix: "left",
+    defaultValue: "1rem",
+  },
+  {
+    property: "--gitbook-widget-button-height",
+    suffix: "button-height",
+    defaultValue: "46px",
+  },
+  {
+    property: "--gitbook-widget-radius",
+    suffix: "radius",
+    defaultValue: ".5rem",
+  },
+  {
+    property: "--gitbook-widget-text-size",
+    suffix: "text-size",
+    defaultValue: "1rem",
+  },
+  {
+    property: "--gitbook-widget-text-color",
+    suffix: "text-color",
+    defaultValue: "#656973",
+    darkModeDefault: "#fff",
+  },
+  {
+    property: "--gitbook-widget-border-color",
+    suffix: "border-color",
+    defaultValue: "#e5e5e5",
+    darkModeDefault: "#202020",
+  },
+  {
+    property: "--gitbook-widget-background-translucent",
+    suffix: "background-translucent",
+    defaultValue: "#ffffffe6",
+    darkModeDefault: "#0f0f0fe6",
+  },
+  {
+    property: "--gitbook-widget-background-translucent-hover",
+    suffix: "background-translucent-hover",
+    defaultValue: "#fafafae6",
+    darkModeDefault: "#141414e6",
+  },
+  {
+    property: "--gitbook-widget-background-solid",
+    suffix: "background-solid",
+    defaultValue: "#fff",
+    darkModeDefault: "#f0f0f0",
+  },
+  {
+    property: "--gitbook-widget-background-solid-hover",
+    suffix: "background-solid-hover",
+    defaultValue: "#fbfbfb",
+  },
+  {
+    property: "--gitbook-widget-icon-size",
+    suffix: "icon-size",
+    defaultValue: "1.25rem",
+  },
+  {
+    property: "--gitbook-widget-window-width",
+    suffix: "window-width",
+    defaultValue: "28rem",
+  },
+  {
+    property: "--gitbook-widget-window-height",
+    suffix: "window-height",
+    defaultValue: "40rem",
+  },
+  {
+    property: "--gitbook-widget-window-spacing",
+    suffix: "window-spacing",
+    defaultValue: ".5rem",
+  },
+  {
+    property: "--gitbook-widget-window-bottom",
+    suffix: "window-bottom",
+    defaultValue:
+      "calc(var(--gitbook-widget-bottom) + var(--gitbook-widget-button-height) + var(--gitbook-widget-window-spacing))",
+  },
+  {
+    property: "--gitbook-widget-transition-duration-fast",
+    suffix: "transition-duration-fast",
+    defaultValue: ".2s",
+  },
+  {
+    property: "--gitbook-widget-transition-duration-slow",
+    suffix: "transition-duration-slow",
+    defaultValue: ".5s",
+  },
+  {
+    property: "--gitbook-widget-easing",
+    suffix: "easing",
+    defaultValue: "cubic-bezier(.25,1,.5,1)",
+  },
+  {
+    property: "--gitbook-widget-easing-bounce",
+    suffix: "easing-bounce",
+    defaultValue: "cubic-bezier(.34,1.56,.64,1)",
+  },
+];
+export const EDITABLE_ROOT_CSS_PROPERTIES = EDITABLE_ROOT_CSS_REFERENCE.map((item) => item.property);
+const ROOT_CSS_PROPERTY_LOOKUP = new Map<string, string>(
+  EDITABLE_ROOT_CSS_REFERENCE.flatMap((item) => [
+    [item.property, item.property],
+    [item.suffix, item.property],
+  ]),
+);
+
+export function normalizeRootCssDeclarations(input: string): string[] {
+  const normalizedDeclarations: string[] = [];
+
+  for (const rawLine of input.split("\n")) {
+    const line = rawLine.trim();
+    if (!line || !line.endsWith(";") || line.includes("{") || line.includes("}")) {
+      continue;
+    }
+
+    const colonIndex = line.indexOf(":");
+    if (colonIndex <= 0) {
+      continue;
+    }
+
+    const rawProperty = line.slice(0, colonIndex).trim();
+    const property = ROOT_CSS_PROPERTY_LOOKUP.get(rawProperty);
+    const value = line.slice(colonIndex + 1, -1).trim();
+
+    if (!property || !value) {
+      continue;
+    }
+
+    normalizedDeclarations.push(`${property}: ${value};`);
+  }
+
+  return normalizedDeclarations;
+}
+
+export function validateRootCssOverrides(input: string): ValidationResult {
+  const lines = input.split("\n");
+
+  for (const [index, rawLine] of lines.entries()) {
+    const line = rawLine.trim();
+    if (!line) {
+      continue;
+    }
+
+    const lineNumber = index + 1;
+
+    if (line.includes("{") || line.includes("}")) {
+      return {
+        valid: false,
+        message: `Line ${lineNumber}: selectors and braces are not allowed.`,
+      };
+    }
+
+    if (!line.endsWith(";")) {
+      return {
+        valid: false,
+        message: `Line ${lineNumber}: declaration must end with ';'.`,
+      };
+    }
+
+    const colonIndex = line.indexOf(":");
+    if (colonIndex <= 0) {
+      return {
+        valid: false,
+        message: `Line ${lineNumber}: declaration must use 'property: value;'.`,
+      };
+    }
+
+    const property = line.slice(0, colonIndex).trim();
+    const value = line.slice(colonIndex + 1, -1).trim();
+
+    if (!ROOT_CSS_PROPERTY_LOOKUP.has(property)) {
+      return {
+        valid: false,
+        message: `Line ${lineNumber}: '${property}' is not an editable GitBook widget property.`,
+      };
+    }
+
+    if (!value) {
+      return {
+        valid: false,
+        message: `Line ${lineNumber}: custom property value cannot be empty.`,
+      };
+    }
+
+    if (value.includes(";")) {
+      return {
+        valid: false,
+        message: `Line ${lineNumber}: use one declaration per line.`,
+      };
+    }
+  }
+
+  return { valid: true };
+}
+
 export function resolveVisitorAuthMode(visitor: VisitorConfig | undefined): VisitorAuthMode {
   return visitor?.authMode === "provider-integration" ? "provider-integration" : "manual-jwt";
 }
@@ -367,6 +589,7 @@ export function sanitizeState(input: PlaygroundState): PlaygroundState {
         ? input.implementation
         : "react",
     mode: input.mode === "assistant" || input.mode === "docs" ? input.mode : "assistant",
+    rootCssOverrides: typeof input.rootCssOverrides === "string" ? input.rootCssOverrides : "",
     sharedConfiguration: {
       ...sharedConfiguration,
       tabs: Array.isArray(sharedConfiguration.tabs)

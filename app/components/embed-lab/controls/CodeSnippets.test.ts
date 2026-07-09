@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { GITBOOK_SCRIPT_URL } from "../defaults";
-import { buildNpmSnippet, buildScriptSnippet } from "./CodeSnippets";
+import { buildNpmSnippet, buildReactSnippet, buildScriptSnippet } from "./CodeSnippets";
 import { ScriptOnlyConfiguration, SharedConfiguration } from "../types";
 
 function createSharedConfiguration(): SharedConfiguration {
@@ -32,6 +32,7 @@ describe("CodeSnippets", () => {
     expect(snippet).toContain("trademark: config.trademark");
     expect(snippet).toContain("assistantName: config.assistantName");
     expect(snippet).toContain("colorScheme: config.colorScheme");
+    expect(snippet).not.toContain(":root {");
   });
 
   it("uses fallback script sources and includes new config in script snippet", () => {
@@ -46,6 +47,7 @@ describe("CodeSnippets", () => {
       createSharedConfiguration(),
       scriptOnlyConfiguration,
       "assistant",
+      "window-height: 30px;",
     );
 
     expect(snippet).toContain(GITBOOK_SCRIPT_URL);
@@ -53,5 +55,23 @@ describe("CodeSnippets", () => {
     expect(snippet).toContain('"closeButton": true');
     expect(snippet).toContain('"search"');
     expect(snippet).toContain('const colorScheme = "dark";');
+    expect(snippet).toContain("<style>");
+    expect(snippet).toContain("--gitbook-widget-window-height: 30px;");
+  });
+
+  it("omits :root CSS block when no overrides are provided", () => {
+    const reactSnippet = buildReactSnippet("https://docs.example.com", createSharedConfiguration(), "assistant");
+    const npmSnippet = buildNpmSnippet("https://docs.example.com", createSharedConfiguration(), "assistant");
+    const scriptSnippet = buildScriptSnippet(
+      "https://docs.example.com",
+      createSharedConfiguration(),
+      {},
+      "assistant",
+      "",
+    );
+
+    expect(reactSnippet).not.toContain(":root {");
+    expect(npmSnippet).not.toContain(":root {");
+    expect(scriptSnippet).not.toContain("<style>");
   });
 });

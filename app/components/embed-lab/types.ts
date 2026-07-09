@@ -96,6 +96,7 @@ export interface PlaygroundState {
   implementation: EmbedImplementation;
   siteURL: string;
   mode: EmbedMode;
+  rootCssOverrides: string;
   sharedConfiguration: SharedConfiguration;
   scriptOnlyConfiguration: ScriptOnlyConfiguration;
   ui: PlaygroundUIState;

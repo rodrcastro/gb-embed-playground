@@ -92,6 +92,7 @@ export function clearPersistedState(): void {
 export function stripSensitiveStateForPersistence(state: PlaygroundState): PlaygroundState {
   return {
     ...state,
+    rootCssOverrides: "",
     sharedConfiguration: {
       ...state.sharedConfiguration,
       visitor: {

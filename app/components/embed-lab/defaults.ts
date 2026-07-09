@@ -4,6 +4,7 @@ export const DEFAULT_PLAYGROUND_STATE: PlaygroundState = {
   implementation: "react",
   siteURL: "https://stage.docs.rodrcastro.dev",
   mode: "assistant",
+  rootCssOverrides: "",
   sharedConfiguration: {
     tabs: ["assistant", "docs", "search"],
     closeButton: true,
