@@ -127,7 +127,17 @@ function ReactPreviewFrame({
     });
   }, [onStatus, frameURL]);
 
-  return <iframe ref={iframeRef} title="GitBook" src={frameURL} width="100%" height="100%" className={className} />;
+  return (
+    <iframe
+      ref={iframeRef}
+      title="GitBook"
+      src={frameURL}
+      width="100%"
+      height="100%"
+      allow="clipboard-write"
+      className={className}
+    />
+  );
 }
 
 function ReactPreviewComponent({

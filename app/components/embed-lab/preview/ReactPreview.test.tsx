@@ -114,6 +114,7 @@ describe("ReactPreview", () => {
     const iframe = container.querySelector("iframe");
     expect(iframe).not.toBeNull();
     expect(iframe?.src).toContain("jwt_token=jwt-value");
+    expect(iframe?.getAttribute("allow")).toBe("clipboard-write");
 
     closeListener?.();
     expect(iframe?.style.display).toBe("none");

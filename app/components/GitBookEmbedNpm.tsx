@@ -23,6 +23,7 @@ export default function GitBookEmbedNpm() {
     iframe.loading = "lazy";
     iframe.style.width = "100%";
     iframe.style.height = "100%";
+    iframe.allow = "clipboard-write";
 
     mountNode.appendChild(iframe);
     const frame = gitbook.createFrame(iframe);
