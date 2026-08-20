@@ -20,24 +20,27 @@ declare global {
 }
 
 async function loadMonaco(): Promise<MonacoModule> {
-  await import("monaco-editor/esm/vs/language/json/monaco.contribution");
-  return import("monaco-editor/esm/vs/editor/editor.api");
+  // The package root is the only entry that ships the editor contributions and
+  // stylesheets; importing `editor.api` alone mounts a shell that renders no
+  // lines. Language features (including JSON) come bundled with it.
+  return import("monaco-editor");
 }
 
 function configureJsonDiagnostics(monaco: MonacoModule) {
-  const jsonDefaults = (
-    monaco.languages as unknown as {
-      json?: {
-        jsonDefaults?: {
-          setDiagnosticsOptions: (options: {
-            validate: boolean;
-            allowComments: boolean;
-            trailingCommas: "error" | "ignore" | "warning";
-          }) => void;
-        };
-      };
-    }
-  ).json?.jsonDefaults;
+  // Monaco 0.56 moved the JSON defaults from `languages.json` to a top-level
+  // `json` namespace; fall back to the old location for older versions.
+  type JsonDefaults = {
+    setDiagnosticsOptions: (options: {
+      validate: boolean;
+      allowComments: boolean;
+      trailingCommas: "error" | "ignore" | "warning";
+    }) => void;
+  };
+  type JsonNamespace = { jsonDefaults?: JsonDefaults };
+
+  const jsonDefaults =
+    (monaco as unknown as { json?: JsonNamespace }).json?.jsonDefaults ??
+    (monaco.languages as unknown as { json?: JsonNamespace }).json?.jsonDefaults;
 
   jsonDefaults?.setDiagnosticsOptions({
     validate: true,
@@ -54,12 +57,12 @@ function configureMonacoWorkers() {
   window.MonacoEnvironment = {
     getWorker: (_moduleId, label) => {
       if (label === "json") {
-        return new Worker(new URL("monaco-editor/esm/vs/language/json/json.worker", import.meta.url), {
+        return new Worker(new URL("monaco-editor/languages/features/json/json.worker", import.meta.url), {
           type: "module",
         });
       }
 
-      return new Worker(new URL("monaco-editor/esm/vs/editor/editor.worker", import.meta.url), {
+      return new Worker(new URL("monaco-editor/editor/editor.worker", import.meta.url), {
         type: "module",
       });
     },
