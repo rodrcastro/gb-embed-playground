@@ -15,7 +15,7 @@ interface CodeSnippetsProps {
 
 type CodeLanguage = "tsx" | "ts" | "html";
 
-const SHIKI_URL = "https://esm.sh/shiki@1.29.2/bundle/web";
+const SHIKI_URL = "https://esm.sh/shiki@4.4.3/bundle/web";
 let shikiHighlighterPromise: Promise<{
   codeToHtml: (code: string, options: { lang: CodeLanguage; theme: string }) => string;
 }> | null = null;
