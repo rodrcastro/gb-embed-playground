@@ -17,9 +17,11 @@ import {
 } from "./state/persistence";
 import { EmbedLabStatus, EmbedRuntimeControls, PlaygroundState } from "./types";
 import {
+  buildRootCssRule,
   formatConfigurationJson,
   normalizeRootCssDeclarations,
   parseConfigurationJson,
+  resolveWidgetChromeDeclarations,
   sanitizeState,
   validateConfiguration,
   validateRootCssOverrides,
@@ -109,14 +111,19 @@ export default function EmbedLab() {
       return;
     }
 
-    const declarations = normalizeRootCssDeclarations(appliedState.rootCssOverrides);
+    const declarations = [
+      // Chrome defaults first so explicit overrides below still win.
+      ...resolveWidgetChromeDeclarations(appliedState.sharedConfiguration.colorScheme),
+      ...normalizeRootCssDeclarations(appliedState.rootCssOverrides),
+    ];
 
-    if (declarations.length === 0) {
+    const cssText = buildRootCssRule(declarations);
+
+    if (!cssText) {
       existing?.remove();
       return;
     }
 
-    const cssText = [":root {", ...declarations.map((declaration) => `  ${declaration}`), "}"].join("\n");
     const styleElement =
       existing instanceof HTMLStyleElement ? existing : document.createElement("style");
 
@@ -126,7 +133,11 @@ export default function EmbedLab() {
     if (!existing) {
       document.head.appendChild(styleElement);
     }
-  }, [appliedState.implementation, appliedState.rootCssOverrides]);
+  }, [
+    appliedState.implementation,
+    appliedState.rootCssOverrides,
+    appliedState.sharedConfiguration.colorScheme,
+  ]);
 
   useEffect(() => {
     return () => {

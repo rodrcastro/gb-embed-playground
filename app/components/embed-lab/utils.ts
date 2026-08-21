@@ -617,3 +617,37 @@ export function sanitizeState(input: PlaygroundState): PlaygroundState {
     },
   };
 }
+
+/**
+ * `:root:root` outranks the widget stylesheet's
+ * `@media (prefers-color-scheme: dark) :root` block whichever order the
+ * <style> and the widget's <link> end up in.
+ */
+export function buildRootCssRule(declarations: string[]): string {
+  if (declarations.length === 0) {
+    return "";
+  }
+
+  return [":root:root {", ...declarations.map((declaration) => `  ${declaration}`), "}"].join("\n");
+}
+
+/**
+ * The script widget only flips its chrome variables inside a
+ * `@media (prefers-color-scheme: dark)` block, so an explicit `colorScheme`
+ * themes the iframe (via `?theme=`) but leaves `#gitbook-widget-window` and
+ * `#gitbook-widget-button` on the host's own preference. Re-emit the widget's
+ * own defaults for the variables that block touches so the chrome follows the
+ * configured scheme too.
+ */
+export function resolveWidgetChromeDeclarations(
+  colorScheme: EmbedColorScheme | undefined,
+): string[] {
+  const scheme = resolveColorScheme(colorScheme);
+  if (!scheme) {
+    return [];
+  }
+
+  return EDITABLE_ROOT_CSS_REFERENCE.filter((item) => item.darkModeDefault).map(
+    (item) => `${item.property}: ${scheme === "dark" ? item.darkModeDefault : item.defaultValue};`,
+  );
+}

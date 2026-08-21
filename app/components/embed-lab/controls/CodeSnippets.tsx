@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import { GITBOOK_SCRIPT_URL } from "../defaults";
 import { ScriptOnlyConfiguration, SharedConfiguration } from "../types";
-import { normalizeRootCssDeclarations, resolveColorScheme, resolveVisitorJWTToken } from "../utils";
+import {
+  buildRootCssRule,
+  normalizeRootCssDeclarations,
+  resolveColorScheme,
+  resolveVisitorJWTToken,
+  resolveWidgetChromeDeclarations,
+} from "../utils";
 
 interface CodeSnippetsProps {
   siteURL: string;
@@ -38,13 +44,15 @@ function normalizeSharedConfiguration(sharedConfiguration: SharedConfiguration) 
   };
 }
 
-function buildRootCssBlock(rootCssOverrides: string): string {
-  const declarations = normalizeRootCssDeclarations(rootCssOverrides);
-  if (declarations.length === 0) {
-    return "";
-  }
-
-  return [":root {", ...declarations.map((declaration) => `  ${declaration}`), "}"].join("\n");
+function buildRootCssBlock(
+  rootCssOverrides: string,
+  colorScheme: SharedConfiguration["colorScheme"],
+): string {
+  return buildRootCssRule([
+    // Chrome defaults first so explicit overrides below still win.
+    ...resolveWidgetChromeDeclarations(colorScheme),
+    ...normalizeRootCssDeclarations(rootCssOverrides),
+  ]);
 }
 
 async function getShikiHighlighter() {
@@ -216,7 +224,7 @@ export function buildScriptSnippet(
   rootCssOverrides: string,
 ) {
   const normalizedConfiguration = normalizeSharedConfiguration(sharedConfiguration);
-  const rootCssBlock = buildRootCssBlock(rootCssOverrides);
+  const rootCssBlock = buildRootCssBlock(rootCssOverrides, sharedConfiguration.colorScheme);
   const stylePrefix = rootCssBlock ? `<style>\n${rootCssBlock}\n</style>\n\n` : "";
   const siteScriptURL = (() => {
     try {

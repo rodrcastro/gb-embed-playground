@@ -59,10 +59,24 @@ describe("CodeSnippets", () => {
     expect(snippet).toContain("--gitbook-widget-window-height: 30px;");
   });
 
-  it("omits :root CSS block when no overrides are provided", () => {
+  it("omits the :root CSS block when there is nothing to declare", () => {
     const reactSnippet = buildReactSnippet("https://docs.example.com", createSharedConfiguration(), "assistant");
     const npmSnippet = buildNpmSnippet("https://docs.example.com", createSharedConfiguration(), "assistant");
     const scriptSnippet = buildScriptSnippet(
+      "https://docs.example.com",
+      { ...createSharedConfiguration(), colorScheme: undefined },
+      {},
+      "assistant",
+      "",
+    );
+
+    expect(reactSnippet).not.toContain(":root");
+    expect(npmSnippet).not.toContain(":root");
+    expect(scriptSnippet).not.toContain("<style>");
+  });
+
+  it("themes the script widget chrome when colorScheme is set, even without overrides", () => {
+    const snippet = buildScriptSnippet(
       "https://docs.example.com",
       createSharedConfiguration(),
       {},
@@ -70,8 +84,11 @@ describe("CodeSnippets", () => {
       "",
     );
 
-    expect(reactSnippet).not.toContain(":root {");
-    expect(npmSnippet).not.toContain(":root {");
-    expect(scriptSnippet).not.toContain("<style>");
+    // The widget's own stylesheet only flips these inside a
+    // `prefers-color-scheme: dark` query, so the snippet has to force them.
+    expect(snippet).toContain("<style>");
+    expect(snippet).toContain(":root:root {");
+    expect(snippet).toContain("--gitbook-widget-background-translucent: #0f0f0fe6;");
+    expect(snippet).toContain("--gitbook-widget-text-color: #fff;");
   });
 });
