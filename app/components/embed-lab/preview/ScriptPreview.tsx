@@ -34,6 +34,7 @@ declare global {
     GitBook?: ((command: GitBookCommand, ...args: unknown[]) => void) & {
       q?: unknown[][];
     };
+    gitbookSettings?: { siteURL: string };
     __gitBookCloseBridgeListeners?: Set<() => void>;
     __gitBookCloseBridgeOriginalLog?: typeof console.log;
   }
@@ -230,6 +231,45 @@ function resolveSiteScriptURL(siteURL: string): string | undefined {
   }
 }
 
+/**
+ * Concurrent effect runs would otherwise each inject the loader, and every
+ * loader execution queues another `init`.
+ */
+const pendingScriptLoads = new Map<string, Promise<void>>();
+
+/**
+ * The site-hosted loader (`~gitbook/embed/script.js`) queues its own
+ * `init` with a build-time siteURL and no frame options. If that init is still
+ * pending when the runtime drains the queue, the runtime throws
+ * "GitBook client already initialized" on our init and aborts the rest of the
+ * drain -- leaving a widget on the wrong site with no `?theme=`. Drop the
+ * loader's queued inits so ours is the only one.
+ */
+function dropQueuedGitBookInitCalls() {
+  const queue = window.GitBook?.q;
+  if (!Array.isArray(queue)) {
+    return;
+  }
+
+  for (let index = queue.length - 1; index >= 0; index -= 1) {
+    if (queue[index]?.[0] === "init") {
+      queue.splice(index, 1);
+    }
+  }
+}
+
+function initializeGitBookClient(siteURL: string, visitorOptions: Record<string, unknown> | undefined) {
+  dropQueuedGitBookInitCalls();
+
+  try {
+    window.GitBook?.("init", { siteURL }, visitorOptions);
+  } catch {
+    // The runtime refuses a second init; drop the stale client and retry once.
+    window.GitBook?.("unload");
+    window.GitBook?.("init", { siteURL }, visitorOptions);
+  }
+}
+
 export function ScriptPreview({
   siteURL,
   mode,
@@ -273,11 +313,7 @@ export function ScriptPreview({
       restoreGitBookScriptFrameNodes();
       restoreGitBookScriptWidgetUI();
       cleanupGitBookScriptWidget();
-      window.GitBook(
-        "init",
-        { siteURL },
-        visitorOptions,
-      );
+      initializeGitBookClient(siteURL, visitorOptions);
       window.GitBook("configure", configuration);
       window.GitBook("show");
       window.GitBook("open");
@@ -329,10 +365,19 @@ export function ScriptPreview({
       onStatus("Script embed close event received. Widget hidden.", "info");
     };
 
-    const loadScript = (src: string): Promise<void> =>
-      new Promise((resolve, reject) => {
+    const loadScript = (src: string): Promise<void> => {
+      const pending = pendingScriptLoads.get(src);
+      if (pending) {
+        return pending;
+      }
+
+      const load = new Promise<void>((resolve, reject) => {
         const existingScript = document.getElementById("gitbook-embed-script");
         existingScript?.remove();
+
+        // The loader reads this instead of its build-time siteURL, so even its
+        // own queued init points at the site under test.
+        window.gitbookSettings = { siteURL };
 
         const script = document.createElement("script");
         script.id = "gitbook-embed-script";
@@ -356,6 +401,10 @@ export function ScriptPreview({
 
         document.head.appendChild(script);
       });
+
+      pendingScriptLoads.set(src, load);
+      return load.finally(() => pendingScriptLoads.delete(src));
+    };
 
     const boot = async () => {
       if (typeof window.GitBook === "function") {

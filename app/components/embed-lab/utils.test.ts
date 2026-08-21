@@ -8,6 +8,7 @@ import {
   resolveColorScheme,
   resolveVisitorAuthMode,
   resolveVisitorJWTToken,
+  resolveWidgetChromeDeclarations,
   sanitizeState,
   validateConfiguration,
   validateRootCssOverrides,
@@ -199,5 +200,23 @@ describe("embed utils", () => {
     expect(
       validateConfiguration(createSharedConfiguration(), { button: { icon: "sparkle" } }).valid,
     ).toBe(true);
+  });
+
+  it("emits widget chrome declarations only for an explicit colorScheme", () => {
+    expect(resolveWidgetChromeDeclarations(undefined)).toEqual([]);
+    expect(resolveWidgetChromeDeclarations("neon" as never)).toEqual([]);
+
+    const dark = resolveWidgetChromeDeclarations("dark");
+    expect(dark).toContain("--gitbook-widget-background-translucent: #0f0f0fe6;");
+    expect(dark).toContain("--gitbook-widget-text-color: #fff;");
+    expect(dark).toContain("--gitbook-widget-border-color: #202020;");
+
+    const light = resolveWidgetChromeDeclarations("light");
+    expect(light).toContain("--gitbook-widget-background-translucent: #ffffffe6;");
+    expect(light).toContain("--gitbook-widget-text-color: #656973;");
+
+    // Only the variables the widget's dark media query touches are re-emitted.
+    expect(dark).toHaveLength(light.length);
+    expect(dark.every((declaration) => declaration.startsWith("--gitbook-widget-"))).toBe(true);
   });
 });
