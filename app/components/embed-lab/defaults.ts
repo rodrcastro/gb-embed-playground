@@ -61,7 +61,7 @@ export const DEFAULT_PLAYGROUND_STATE: PlaygroundState = {
   },
 };
 
-export const GITBOOK_SCRIPT_URL = "https://cdn.jsdelivr.net/npm/@gitbook/embed@0.5.1/dist/script.js";
+export const GITBOOK_SCRIPT_URL = "https://cdn.jsdelivr.net/npm/@gitbook/embed@0.7.0/dist/script.js";
 
 export const URL_STATE_PARAM = "gb";
 export const LOCAL_STORAGE_KEY = "gitbook-embed-lab-state";
