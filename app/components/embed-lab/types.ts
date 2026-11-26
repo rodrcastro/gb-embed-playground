@@ -26,6 +26,16 @@ export interface ToolConfig {
   response?: string;
   confirmationLabel?: string;
   confirmationIcon?: string;
+  /**
+   * Supporting text shown above the confirmation dialog. Limited to 512
+   * characters by the embed.
+   */
+  confirmationContext?: string;
+  /**
+   * Build the confirmation from the input the assistant calls the tool with,
+   * interpolating `{{path}}` placeholders in the context.
+   */
+  confirmationDynamic?: boolean;
 }
 
 export interface VisitorConfig {
@@ -40,6 +50,10 @@ export interface VisitorConfig {
 
 export interface SharedConfiguration {
   tabs: EmbedTab[];
+  /** Tab the embed opens on. Must be one of the enabled tabs. */
+  defaultTab?: EmbedTab;
+  /** Page the docs tab opens on, instead of the site home page. */
+  defaultPage?: string;
   closeButton: boolean;
   trademark?: boolean;
   assistantName?: string;

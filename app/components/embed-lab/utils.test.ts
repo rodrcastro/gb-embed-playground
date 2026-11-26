@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { PlaygroundState, SharedConfiguration } from "./types";
 import {
+  CONFIRMATION_CONTEXT_MAX_LENGTH,
   buildSharedConfiguration,
   buildTools,
+  interpolateConfirmationContext,
   normalizeRootCssDeclarations,
+  resolveDefaultPage,
+  resolveDefaultTab,
   resolveAssistantName,
   resolveColorScheme,
   resolveVisitorAuthMode,
@@ -199,5 +203,162 @@ describe("embed utils", () => {
     expect(
       validateConfiguration(createSharedConfiguration(), { button: { icon: "sparkle" } }).valid,
     ).toBe(true);
+  });
+
+  it("keeps a default tab only when it is one of the enabled tabs", () => {
+    expect(resolveDefaultTab(["assistant", "docs"], "docs")).toBe("docs");
+    expect(resolveDefaultTab(["assistant", "docs"], "search")).toBeUndefined();
+    expect(resolveDefaultTab(["assistant"], undefined)).toBeUndefined();
+    expect(resolveDefaultTab(["assistant"], "nope" as never)).toBeUndefined();
+  });
+
+  it("trims the default page and drops empty values", () => {
+    expect(resolveDefaultPage("  /guides/start  ")).toBe("/guides/start");
+    expect(resolveDefaultPage("   ")).toBeUndefined();
+    expect(resolveDefaultPage(undefined)).toBeUndefined();
+  });
+
+  it("includes defaultTab and defaultPage in the built configuration", () => {
+    const built = buildSharedConfiguration(
+      createSharedConfiguration({ defaultTab: "search", defaultPage: " /start " }),
+    ) as { defaultTab?: string; defaultPage?: string };
+
+    expect(built.defaultTab).toBe("search");
+    expect(built.defaultPage).toBe("/start");
+  });
+
+  it("omits a defaultTab that is not enabled", () => {
+    const built = buildSharedConfiguration(
+      createSharedConfiguration({ tabs: ["assistant"], defaultTab: "docs" }),
+    ) as { defaultTab?: string };
+
+    expect(built.defaultTab).toBeUndefined();
+  });
+
+  it("rejects a defaultTab outside the enabled tabs", () => {
+    expect(
+      validateConfiguration(createSharedConfiguration({ tabs: ["assistant"], defaultTab: "docs" }), {}),
+    ).toEqual({
+      valid: false,
+      message: "defaultTab 'docs' must be one of the enabled tabs.",
+    });
+
+    expect(
+      validateConfiguration(createSharedConfiguration({ defaultTab: "chat" as never }), {}),
+    ).toEqual({
+      valid: false,
+      message: "defaultTab must be one of assistant, docs, search.",
+    });
+  });
+
+  it("drops a stale defaultTab when sanitizing persisted state", () => {
+    const sanitized = sanitizeState({
+      sharedConfiguration: createSharedConfiguration({ tabs: ["assistant"], defaultTab: "search" }),
+      scriptOnlyConfiguration: {},
+    } as PlaygroundState);
+
+    expect(sanitized.sharedConfiguration.defaultTab).toBeUndefined();
+    expect(sanitized.sharedConfiguration.defaultPage).toBeUndefined();
+  });
+
+  it("resolves placeholders in a confirmation context against the tool input", () => {
+    expect(
+      interpolateConfirmationContext("Deploy {{service}} to {{env.name}}?", {
+        service: "api",
+        env: { name: "production" },
+      }),
+    ).toBe("Deploy api to production?");
+  });
+
+  it("renders unknown placeholders as empty and serializes objects", () => {
+    expect(interpolateConfirmationContext("[{{missing}}]", {})).toBe("[]");
+    expect(interpolateConfirmationContext("{{a}}", { a: { b: 1 } })).toBe('{"b":1}');
+    expect(interpolateConfirmationContext("{{n}}", { n: 0 })).toBe("0");
+  });
+
+  it("truncates an interpolated context to the embed limit", () => {
+    const resolved = interpolateConfirmationContext("{{value}}", {
+      value: "x".repeat(CONFIRMATION_CONTEXT_MAX_LENGTH + 50),
+    });
+
+    expect(resolved).toHaveLength(CONFIRMATION_CONTEXT_MAX_LENGTH);
+  });
+
+  it("builds a static confirmation context", () => {
+    const [tool] = buildTools([
+      {
+        id: "t1",
+        name: "deploy",
+        confirmationLabel: "Deploy",
+        confirmationContext: "  Ships to production.  ",
+      },
+    ]) as Array<{ confirmation?: { label: string; context?: string } }>;
+
+    expect(tool.confirmation).toEqual({ label: "Deploy", context: "Ships to production." });
+  });
+
+  it("builds a function confirmation when the context is dynamic", () => {
+    const [tool] = buildTools([
+      {
+        id: "t1",
+        name: "deploy",
+        confirmationLabel: "Deploy",
+        confirmationIcon: "rocket",
+        confirmationContext: "Deploy {{service}}?",
+        confirmationDynamic: true,
+      },
+    ]) as Array<{ confirmation?: (input: object) => { label: string; icon?: string; context?: string } }>;
+
+    expect(typeof tool.confirmation).toBe("function");
+    expect(tool.confirmation?.({ service: "api" })).toEqual({
+      label: "Deploy",
+      icon: "rocket",
+      context: "Deploy api?",
+    });
+  });
+
+  it("ignores a dynamic confirmation without a context template", () => {
+    const [tool] = buildTools([
+      { id: "t1", name: "deploy", confirmationLabel: "Deploy", confirmationDynamic: true },
+    ]) as Array<{ confirmation?: unknown }>;
+
+    expect(tool.confirmation).toEqual({ label: "Deploy" });
+  });
+
+  it("rejects a confirmation context longer than the embed limit", () => {
+    const result = validateConfiguration(
+      createSharedConfiguration({
+        tools: [
+          {
+            id: "t1",
+            name: "deploy",
+            confirmationLabel: "Deploy",
+            confirmationContext: "x".repeat(CONFIRMATION_CONTEXT_MAX_LENGTH + 1),
+          },
+        ],
+      }),
+      {},
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.message).toContain("512 characters or fewer");
+  });
+
+  it("passes the tool input schema under inputSchema", () => {
+    const [tool] = buildTools([
+      { id: "t1", name: "lookup", inputSchemaJson: '{"type":"object","properties":{}}' },
+    ]) as Array<{ inputSchema?: Record<string, unknown> }>;
+
+    expect(tool.inputSchema).toEqual({ type: "object", properties: {} });
+  });
+
+  it("returns the mock response as a tool output object", async () => {
+    const [jsonTool, textTool] = buildTools([
+      { id: "t1", name: "status", response: '{"status":"ok"}' },
+      { id: "t2", name: "text", response: "all good" },
+    ]) as Array<{ execute: () => Promise<{ output: unknown }> }>;
+
+    expect(await jsonTool.execute()).toEqual({ output: { status: "ok" } });
+    expect(await textTool.execute()).toEqual({ output: { result: "all good" } });
   });
 });

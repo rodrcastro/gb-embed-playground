@@ -71,6 +71,8 @@ function ReactPreviewFrame({
 
     const settings = {
       tabs: configuration.tabs,
+      ...(configuration.defaultTab ? { defaultTab: configuration.defaultTab } : {}),
+      ...(configuration.defaultPage ? { defaultPage: configuration.defaultPage } : {}),
       closeButton: configuration.closeButton,
       trademark: configuration.trademark,
       ...(configuration.assistantName ? { assistantName: configuration.assistantName } : {}),
@@ -85,13 +87,24 @@ function ReactPreviewFrame({
 
     frame.configure(settings as never);
 
-    if (mode === "assistant") {
-      frame.navigateToAssistant();
-    } else {
-      frame.navigateToPage("/");
+    // defaultTab/defaultPage decide where the embed opens, so navigating right
+    // after configure would immediately override them.
+    const opensItself = Boolean(configuration.defaultTab || configuration.defaultPage);
+
+    if (!opensItself) {
+      if (mode === "assistant") {
+        frame.navigateToAssistant();
+      } else {
+        frame.navigateToPage("/");
+      }
     }
 
-    onStatus?.("React embed applied.", "success");
+    onStatus?.(
+      opensItself
+        ? "React embed applied. Opening position comes from defaultTab/defaultPage."
+        : "React embed applied.",
+      "success",
+    );
   }, [mode, configuration, onStatus]);
 
   useEffect(() => {
