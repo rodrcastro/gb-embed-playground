@@ -80,6 +80,8 @@ export function NpmPreview({
 
         gitbook.configure({
           tabs: configuration.tabs,
+          ...(configuration.defaultTab ? { defaultTab: configuration.defaultTab } : {}),
+          ...(configuration.defaultPage ? { defaultPage: configuration.defaultPage } : {}),
           closeButton: configuration.closeButton,
           trademark: configuration.trademark,
           ...(configuration.assistantName ? { assistantName: configuration.assistantName } : {}),
@@ -94,10 +96,16 @@ export function NpmPreview({
           onStatus("NPM embed close event received. Frame hidden.", "info");
         });
 
-        if (mode === "assistant") {
-          gitbook.navigateToAssistant?.();
-        } else {
-          gitbook.navigateToPage?.("/");
+        // defaultTab/defaultPage decide where the embed opens, so navigating
+        // right after configure would immediately override them.
+        const opensItself = Boolean(configuration.defaultTab || configuration.defaultPage);
+
+        if (!opensItself) {
+          if (mode === "assistant") {
+            gitbook.navigateToAssistant?.();
+          } else {
+            gitbook.navigateToPage?.("/");
+          }
         }
 
         onControlsReady?.({
@@ -106,7 +114,12 @@ export function NpmPreview({
           },
         });
 
-        onStatus("NPM embed applied.", "success");
+        onStatus(
+          opensItself
+            ? "NPM embed applied. Opening position comes from defaultTab/defaultPage."
+            : "NPM embed applied.",
+          "success",
+        );
         cleanup = () => {
           unsubscribeClose?.();
           onControlsReady?.(null);

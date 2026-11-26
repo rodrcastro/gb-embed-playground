@@ -282,10 +282,16 @@ export function ScriptPreview({
       window.GitBook("show");
       window.GitBook("open");
 
-      if (mode === "assistant") {
-        window.GitBook("navigateToAssistant");
-      } else {
-        window.GitBook("navigateToPage", "/");
+      // defaultTab/defaultPage decide where the embed opens, so navigating right
+      // after configure would immediately override them.
+      const opensItself = Boolean(configuration.defaultTab || configuration.defaultPage);
+
+      if (!opensItself) {
+        if (mode === "assistant") {
+          window.GitBook("navigateToAssistant");
+        } else {
+          window.GitBook("navigateToPage", "/");
+        }
       }
 
       window.setTimeout(() => {
@@ -298,7 +304,12 @@ export function ScriptPreview({
         toggle: () => window.GitBook?.("toggle"),
       });
 
-      onStatus("Script embed reloaded.", "success");
+      onStatus(
+        opensItself
+          ? "Script embed reloaded. Opening position comes from defaultTab/defaultPage."
+          : "Script embed reloaded.",
+        "success",
+      );
     };
 
     const onFrameMessage = (event: MessageEvent) => {

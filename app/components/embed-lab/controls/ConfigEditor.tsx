@@ -8,7 +8,12 @@ import {
   SharedConfiguration,
   ValidationResult,
 } from "../types";
-import { EDITABLE_ROOT_CSS_REFERENCE, SCRIPT_BUTTON_ICONS } from "../utils";
+import {
+  CONFIRMATION_CONTEXT_MAX_LENGTH,
+  EDITABLE_ROOT_CSS_REFERENCE,
+  SCRIPT_BUTTON_ICONS,
+  resolveDefaultTab,
+} from "../utils";
 import { MonacoJsonEditor } from "./MonacoJsonEditor";
 
 interface ConfigEditorProps {
@@ -143,10 +148,12 @@ export function ConfigEditor({
       current.delete(tab);
     }
 
-    const next = Array.from(current) as EmbedTab[];
+    const next = (current.size > 0 ? Array.from(current) : ["assistant"]) as EmbedTab[];
     onSharedConfigurationChange({
       ...sharedConfiguration,
-      tabs: next.length > 0 ? next : ["assistant"],
+      tabs: next,
+      // A default tab that is no longer enabled would be rejected by the embed.
+      defaultTab: resolveDefaultTab(next, sharedConfiguration.defaultTab),
     });
   };
 
@@ -198,6 +205,46 @@ export function ConfigEditor({
               </label>
             </div>
           </div>
+          <label className="lab-field">
+            <span>defaultTab</span>
+            <select
+              className="lab-input"
+              value={sharedConfiguration.defaultTab || ""}
+              onChange={(event) =>
+                onSharedConfigurationChange({
+                  ...sharedConfiguration,
+                  defaultTab: (event.target.value || undefined) as EmbedTab | undefined,
+                })
+              }
+            >
+              <option value="">(auto)</option>
+              {sharedConfiguration.tabs.map((tab) => (
+                <option key={tab} value={tab}>
+                  {tab}
+                </option>
+              ))}
+            </select>
+            <small className="lab-field-hint">
+              Tab the embed opens on. Takes over from Initial mode.
+            </small>
+          </label>
+          <label className="lab-field">
+            <span>defaultPage</span>
+            <input
+              className="lab-input"
+              value={sharedConfiguration.defaultPage || ""}
+              placeholder="/getting-started/quickstart"
+              onChange={(event) =>
+                onSharedConfigurationChange({
+                  ...sharedConfiguration,
+                  defaultPage: event.target.value || undefined,
+                })
+              }
+            />
+            <small className="lab-field-hint">
+              Page the docs tab opens on, instead of the site home page.
+            </small>
+          </label>
           <label className="lab-field">
             <span>assistantName</span>
             <input
@@ -554,6 +601,51 @@ export function ConfigEditor({
                   }}
                 />
               </label>
+              <label className="lab-field">
+                <span>Confirmation context (optional)</span>
+                <textarea
+                  className="lab-textarea"
+                  rows={2}
+                  maxLength={CONFIRMATION_CONTEXT_MAX_LENGTH}
+                  value={tool.confirmationContext || ""}
+                  placeholder="Runs against the production release pipeline."
+                  onChange={(event) => {
+                    const nextTools = [...sharedConfiguration.tools];
+                    nextTools[index] = { ...tool, confirmationContext: event.target.value };
+                    onSharedConfigurationChange({
+                      ...sharedConfiguration,
+                      tools: nextTools,
+                    });
+                  }}
+                />
+                <small className="lab-field-hint">
+                  Shown above the confirmation dialog, up to {CONFIRMATION_CONTEXT_MAX_LENGTH}{" "}
+                  characters. Needs a confirmation label to appear.
+                </small>
+              </label>
+              <div className="lab-field">
+                <span>Dynamic confirmation</span>
+                <label className="lab-check-row">
+                  <input
+                    type="checkbox"
+                    checked={tool.confirmationDynamic ?? false}
+                    onChange={(event) => {
+                      const nextTools = [...sharedConfiguration.tools];
+                      nextTools[index] = { ...tool, confirmationDynamic: event.target.checked };
+                      onSharedConfigurationChange({
+                        ...sharedConfiguration,
+                        tools: nextTools,
+                      });
+                    }}
+                  />
+                  Build the context from the tool input
+                </label>
+                <small className="lab-field-hint">
+                  Passes a function to the embed instead of a static object, resolving{" "}
+                  {"{{field}}"} placeholders in the context against the input the assistant calls
+                  the tool with.
+                </small>
+              </div>
             </div>
           ))}
           <button

@@ -13,6 +13,7 @@ import {
 } from "./types";
 
 export const ASSISTANT_NAME_MAX_LENGTH = 32;
+export const CONFIRMATION_CONTEXT_MAX_LENGTH = 512;
 export const SCRIPT_BUTTON_ICONS: ScriptButtonIcon[] = ["assistant", "sparkle", "help", "book"];
 export const EMBED_TABS: EmbedTab[] = ["assistant", "docs", "search"];
 export const EMBED_COLOR_SCHEMES: EmbedColorScheme[] = ["light", "dark"];
@@ -46,6 +47,49 @@ function parseToolInputSchema(tool: ToolConfig): Record<string, unknown> | undef
       query: { type: "string" },
     },
   };
+}
+
+export function resolveDefaultTab(
+  tabs: EmbedTab[],
+  defaultTab: EmbedTab | undefined,
+): EmbedTab | undefined {
+  if (!defaultTab || !EMBED_TABS.includes(defaultTab)) {
+    return undefined;
+  }
+
+  // The embed only honours a default tab that is actually enabled.
+  return tabs.includes(defaultTab) ? defaultTab : undefined;
+}
+
+export function resolveDefaultPage(defaultPage: string | undefined): string | undefined {
+  const trimmed = defaultPage?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+const CONFIRMATION_PLACEHOLDER = /\{\{\s*([\w$]+(?:\.[\w$]+)*)\s*\}\}/g;
+
+function resolveInputPath(input: unknown, path: string): unknown {
+  return path.split(".").reduce<unknown>((value, key) => {
+    return isObject(value) ? value[key] : undefined;
+  }, input);
+}
+
+/**
+ * Resolve `{{path}}` placeholders in a confirmation context against the input
+ * the assistant called the tool with. Unknown paths resolve to an empty string.
+ */
+export function interpolateConfirmationContext(template: string, input: unknown): string {
+  const resolved = template.replace(CONFIRMATION_PLACEHOLDER, (_match, path: string) => {
+    const value = resolveInputPath(input, path);
+
+    if (value === undefined || value === null) {
+      return "";
+    }
+
+    return typeof value === "object" ? JSON.stringify(value) : String(value);
+  });
+
+  return resolved.slice(0, CONFIRMATION_CONTEXT_MAX_LENGTH);
 }
 
 export interface EditableRootCssPropertyReference {
@@ -346,28 +390,62 @@ export function buildActions(actions: ActionConfig[]) {
     });
 }
 
+interface BuiltToolConfirmation {
+  label: string;
+  icon?: string;
+  context?: string;
+}
+
+/**
+ * Build the `confirmation` of a tool. A tool with a dynamic context returns a
+ * function, which the embed calls with the input the assistant produced.
+ */
+export function buildToolConfirmation(
+  tool: ToolConfig,
+): BuiltToolConfirmation | ((input: object) => BuiltToolConfirmation) | undefined {
+  const label = tool.confirmationLabel?.trim();
+  if (!label) {
+    return undefined;
+  }
+
+  const icon = tool.confirmationIcon?.trim();
+  const context = tool.confirmationContext?.trim();
+  const base: BuiltToolConfirmation = {
+    label,
+    ...(icon ? { icon } : {}),
+  };
+
+  if (tool.confirmationDynamic && context) {
+    return (input: object) => ({
+      ...base,
+      context: interpolateConfirmationContext(context, input),
+    });
+  }
+
+  return {
+    ...base,
+    ...(context ? { context: context.slice(0, CONFIRMATION_CONTEXT_MAX_LENGTH) } : {}),
+  };
+}
+
+function buildToolOutput(response: string): object {
+  return parseJsonObject(response) ?? { result: response };
+}
+
 export function buildTools(tools: ToolConfig[]) {
   return tools
     .filter((tool) => tool.name.trim().length > 0)
     .map((tool) => {
       const schema = parseToolInputSchema(tool);
       const response = tool.response || `{"tool":"${tool.name}","ok":true}`;
-      const confirmationLabel = tool.confirmationLabel?.trim();
-      const confirmationIcon = tool.confirmationIcon?.trim();
+      const confirmation = buildToolConfirmation(tool);
 
       return {
         name: tool.name,
         description: tool.description,
-        input: schema,
-        ...(confirmationLabel
-          ? {
-              confirmation: {
-                label: confirmationLabel,
-                ...(confirmationIcon ? { icon: confirmationIcon } : {}),
-              },
-            }
-          : {}),
-        execute: async () => response,
+        inputSchema: schema,
+        ...(confirmation ? { confirmation } : {}),
+        execute: async () => ({ output: buildToolOutput(response) }),
       };
     });
 }
@@ -407,8 +485,13 @@ export function buildSharedConfiguration(sharedConfiguration: SharedConfiguratio
   const assistantName = resolveAssistantName(sharedConfiguration.assistantName);
   const colorScheme = resolveColorScheme(sharedConfiguration.colorScheme);
 
+  const defaultTab = resolveDefaultTab(sharedConfiguration.tabs, sharedConfiguration.defaultTab);
+  const defaultPage = resolveDefaultPage(sharedConfiguration.defaultPage);
+
   return {
     tabs: sharedConfiguration.tabs,
+    ...(defaultTab ? { defaultTab } : {}),
+    ...(defaultPage ? { defaultPage } : {}),
     closeButton: sharedConfiguration.closeButton,
     trademark: sharedConfiguration.trademark ?? true,
     assistantName,
@@ -441,6 +524,26 @@ export function validateConfiguration(
 
   if (sharedConfiguration.tabs.some((tab) => !EMBED_TABS.includes(tab))) {
     return { valid: false, message: `tabs may only contain ${EMBED_TABS.join(", ")}.` };
+  }
+
+  if (typeof sharedConfiguration.defaultTab !== "undefined") {
+    if (!EMBED_TABS.includes(sharedConfiguration.defaultTab)) {
+      return { valid: false, message: `defaultTab must be one of ${EMBED_TABS.join(", ")}.` };
+    }
+
+    if (!sharedConfiguration.tabs.includes(sharedConfiguration.defaultTab)) {
+      return {
+        valid: false,
+        message: `defaultTab '${sharedConfiguration.defaultTab}' must be one of the enabled tabs.`,
+      };
+    }
+  }
+
+  if (
+    typeof sharedConfiguration.defaultPage !== "undefined" &&
+    typeof sharedConfiguration.defaultPage !== "string"
+  ) {
+    return { valid: false, message: "defaultPage must be a string." };
   }
 
   if (!Array.isArray(sharedConfiguration.suggestions)) {
@@ -476,6 +579,16 @@ export function validateConfiguration(
   }
 
   for (const tool of sharedConfiguration.tools) {
+    if (
+      typeof tool.confirmationContext === "string" &&
+      tool.confirmationContext.trim().length > CONFIRMATION_CONTEXT_MAX_LENGTH
+    ) {
+      return {
+        valid: false,
+        message: `Tool '${tool.name || tool.id}' confirmation context must be ${CONFIRMATION_CONTEXT_MAX_LENGTH} characters or fewer.`,
+      };
+    }
+
     if (tool.inputSchemaJson && tool.inputSchemaJson.trim()) {
       try {
         const schema = JSON.parse(tool.inputSchemaJson);
@@ -582,6 +695,10 @@ export function sanitizeState(input: PlaygroundState): PlaygroundState {
     visitor: {},
   };
 
+  const tabs: EmbedTab[] = Array.isArray(sharedConfiguration.tabs)
+    ? sharedConfiguration.tabs.filter((tab) => EMBED_TABS.includes(tab))
+    : ["assistant", "docs"];
+
   return {
     ...input,
     implementation:
@@ -592,9 +709,10 @@ export function sanitizeState(input: PlaygroundState): PlaygroundState {
     rootCssOverrides: typeof input.rootCssOverrides === "string" ? input.rootCssOverrides : "",
     sharedConfiguration: {
       ...sharedConfiguration,
-      tabs: Array.isArray(sharedConfiguration.tabs)
-        ? sharedConfiguration.tabs.filter((tab) => EMBED_TABS.includes(tab))
-        : ["assistant", "docs"],
+      tabs,
+      defaultTab: resolveDefaultTab(tabs, sharedConfiguration.defaultTab),
+      defaultPage:
+        typeof sharedConfiguration.defaultPage === "string" ? sharedConfiguration.defaultPage : undefined,
       closeButton: typeof sharedConfiguration.closeButton === "boolean" ? sharedConfiguration.closeButton : false,
       trademark:
         typeof sharedConfiguration.trademark === "boolean" ? sharedConfiguration.trademark : true,

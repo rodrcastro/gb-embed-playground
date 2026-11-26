@@ -39,6 +39,8 @@ export const DEFAULT_PLAYGROUND_STATE: PlaygroundState = {
         response: '{"status":"healthy","eta":"2h"}',
         confirmationLabel: "Check release status",
         confirmationIcon: "rocket",
+        confirmationContext: "Looks up release {{releaseId}} in the production pipeline.",
+        confirmationDynamic: true,
       },
     ],
     visitor: {

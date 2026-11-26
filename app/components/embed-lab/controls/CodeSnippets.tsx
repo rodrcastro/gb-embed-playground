@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import { GITBOOK_SCRIPT_URL } from "../defaults";
 import { ScriptOnlyConfiguration, SharedConfiguration } from "../types";
-import { normalizeRootCssDeclarations, resolveColorScheme, resolveVisitorJWTToken } from "../utils";
+import {
+  normalizeRootCssDeclarations,
+  resolveColorScheme,
+  resolveDefaultPage,
+  resolveDefaultTab,
+  resolveVisitorJWTToken,
+} from "../utils";
 
 interface CodeSnippetsProps {
   siteURL: string;
@@ -36,6 +42,17 @@ function normalizeSharedConfiguration(sharedConfiguration: SharedConfiguration) 
     ...sharedConfiguration,
     visitor,
   };
+}
+
+/**
+ * `defaultTab` / `defaultPage` decide where the embed opens, so a snippet that
+ * sets either must not navigate right after configure.
+ */
+function opensFromConfiguration(sharedConfiguration: SharedConfiguration): boolean {
+  return Boolean(
+    resolveDefaultTab(sharedConfiguration.tabs, sharedConfiguration.defaultTab) ||
+      resolveDefaultPage(sharedConfiguration.defaultPage),
+  );
 }
 
 function buildRootCssBlock(rootCssOverrides: string): string {
@@ -146,17 +163,20 @@ export function buildReactSnippet(
   mode: "assistant" | "docs",
 ) {
   const normalizedConfiguration = normalizeSharedConfiguration(sharedConfiguration);
+  // <GitBookFrame> takes the configuration as individual props, and has no
+  // mode prop: defaultTab is how you choose where it opens.
+  const modeComment = opensFromConfiguration(sharedConfiguration)
+    ? ""
+    : `// Initial mode "${mode}": set defaultTab to open the embed on a given tab.\n`;
 
   return `import { GitBookProvider, GitBookFrame } from "@gitbook/embed/react";
+
+${modeComment}const configuration = ${toJson(normalizedConfiguration)};
 
 export function Preview() {
   return (
     <GitBookProvider siteURL="${siteURL}">
-      <GitBookFrame
-        className="gitbook-embed"
-        configuration={${toJson(normalizedConfiguration)}}
-        mode="${mode}"
-      />
+      <GitBookFrame className="gitbook-embed" {...configuration} />
     </GitBookProvider>
   );
 }`;
@@ -168,8 +188,9 @@ export function buildNpmSnippet(
   mode: "assistant" | "docs",
 ) {
   const normalizedConfiguration = normalizeSharedConfiguration(sharedConfiguration);
-  const modeNavigation =
-    mode === "assistant"
+  const modeNavigation = opensFromConfiguration(sharedConfiguration)
+    ? "// The embed opens on defaultTab/defaultPage."
+    : mode === "assistant"
       ? "frame.navigateToAssistant();"
       : "frame.navigateToPage(\"/\");";
 
@@ -194,6 +215,8 @@ document.querySelector("#gitbook-target")?.append(iframe);
 const frame = client.createFrame(iframe);
 frame.configure({
   tabs: config.tabs,
+  defaultTab: config.defaultTab,
+  defaultPage: config.defaultPage,
   closeButton: config.closeButton,
   trademark: config.trademark,
   assistantName: config.assistantName,
@@ -285,9 +308,11 @@ export function buildScriptSnippet(
     window.GitBook("show");
     window.GitBook("open");
     ${
-      mode === "assistant"
-        ? 'window.GitBook("navigateToAssistant");'
-        : 'window.GitBook("navigateToPage", "/");'
+      opensFromConfiguration(sharedConfiguration)
+        ? "// The embed opens on defaultTab/defaultPage."
+        : mode === "assistant"
+          ? 'window.GitBook("navigateToAssistant");'
+          : 'window.GitBook("navigateToPage", "/");'
     }
   };
 
